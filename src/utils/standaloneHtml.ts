@@ -1,0 +1,448 @@
+export const STANDALONE_AMETA_HTML = `<!DOCTYPE html>
+<html lang="pt-BR" class="dark" data-tema="escuro">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Início — Ameta | Operações e Acionamentos</title>
+  <meta name="description" content="Painel de campo Ameta: Início, Acionamentos, Agenda e Chat com Responsáveis." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['"Plus Jakarta Sans"', 'ui-sans-serif', 'system-ui', 'sans-serif'],
+          },
+          colors: {
+            background: 'var(--bg-canvas)',
+            foreground: 'var(--fg-primary)',
+            muted: {
+              DEFAULT: 'var(--bg-muted)',
+              foreground: 'var(--fg-muted)',
+            },
+            border: 'var(--border-subtle)',
+            input: 'var(--border-input)',
+            primary: {
+              DEFAULT: 'var(--accent-primary)',
+              foreground: 'var(--accent-primary-fg)',
+            },
+            secondary: {
+              DEFAULT: 'var(--bg-secondary)',
+              foreground: 'var(--fg-secondary)',
+            },
+            accent: {
+              DEFAULT: 'var(--bg-hover)',
+              foreground: 'var(--fg-primary)',
+            },
+            sidebar: {
+              DEFAULT: 'var(--bg-sidebar)',
+              foreground: 'var(--fg-sidebar)',
+              border: 'var(--border-sidebar)',
+              accent: 'var(--bg-sidebar-active)',
+              'accent-foreground': 'var(--fg-sidebar-active)',
+            },
+          },
+        },
+      },
+    };
+  </script>
+  <style>
+    :root {
+      --bg-canvas: #f8fafc;
+      --fg-primary: #0f172a;
+      --bg-muted: #f1f5f9;
+      --fg-muted: #64748b;
+      --border-subtle: #e2e8f0;
+      --border-input: #cbd5e1;
+      --accent-primary: #0284c7;
+      --accent-primary-fg: #ffffff;
+      --bg-secondary: #e2e8f0;
+      --fg-secondary: #1e293b;
+      --bg-hover: #f1f5f9;
+      --bg-sidebar: #ffffff;
+      --fg-sidebar: #334155;
+      --border-sidebar: #e2e8f0;
+      --bg-sidebar-active: #e0f2fe;
+      --fg-sidebar-active: #0369a1;
+    }
+
+    html.dark {
+      --bg-canvas: #0d1218;
+      --fg-primary: #eef2f6;
+      --bg-muted: #141c25;
+      --fg-muted: #8b98a9;
+      --border-subtle: #1e2733;
+      --border-input: #263241;
+      --accent-primary: #5da9d6;
+      --accent-primary-fg: #071018;
+      --bg-secondary: #1c2632;
+      --fg-secondary: #dce5ef;
+      --bg-hover: #16202c;
+      --bg-sidebar: #11161d;
+      --fg-sidebar: #c9d3df;
+      --border-sidebar: #1e2733;
+      --bg-sidebar-active: #172a3c;
+      --fg-sidebar-active: #eef6ff;
+    }
+
+    body {
+      font-family: "Plus Jakarta Sans", ui-sans-serif, system-ui, sans-serif;
+      background-color: var(--bg-canvas);
+      color: var(--fg-primary);
+    }
+
+    .tabular-nums {
+      font-variant-numeric: tabular-nums;
+    }
+
+    ::-webkit-scrollbar { width: 8px; height: 8px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: rgba(139, 152, 169, 0.28); border-radius: 9999px; }
+    ::-webkit-scrollbar-thumb:hover { background: rgba(139, 152, 169, 0.45); }
+  </style>
+</head>
+<body class="antialiased">
+  <div class="flex h-screen min-h-0 w-full overflow-hidden bg-background">
+    <!-- Mobile Backdrop -->
+    <div id="mobile-backdrop" onclick="toggleMobileSidebar(false)" class="fixed inset-0 z-40 hidden bg-black/65 backdrop-blur-sm md:hidden"></div>
+
+    <!-- Sidebar -->
+    <aside id="sidebar" class="fixed inset-y-0 left-0 z-50 hidden w-64 shrink-0 flex-col border-r border-sidebar-border bg-sidebar text-sidebar-foreground transition-all duration-200 md:static md:flex">
+      <!-- Logo Ameta Serviços -->
+      <div class="flex min-h-[68px] items-center justify-center border-b border-sidebar-border p-2">
+        <a href="#inicio" onclick="showSection('inicio')" class="flex items-center justify-center rounded-md px-2 py-1.5 outline-none focus-visible:ring-2 focus-visible:ring-primary" aria-label="Ameta — ir para o início">
+          <svg id="logo-full" viewBox="0 0 186 44" fill="none" xmlns="http://www.w3.org/2000/svg" class="h-11 w-auto">
+            <rect x="19" y="9" width="18.5" height="18.5" rx="3.8" transform="rotate(45 19 9)" class="stroke-[#243b94] dark:stroke-[#557aff]" stroke-width="4"/>
+            <rect x="33" y="9" width="18.5" height="18.5" rx="3.8" transform="rotate(45 33 9)" class="stroke-[#118681] dark:stroke-[#23bfb8]" stroke-width="4"/>
+            <path d="M28.5 25.5 L23.5 30.5" class="stroke-[#243b94] dark:stroke-[#557aff]" stroke-width="4.2" stroke-linecap="round"/>
+            <text x="55" y="24" class="fill-[#21358a] dark:fill-[#eef4ff]" style="font-size:21px;font-weight:700;letter-spacing:-0.02em;">Ameta</text>
+            <text x="56" y="36.5" class="fill-[#118681] dark:fill-[#26bfb8]" style="font-size:8.8px;font-weight:700;letter-spacing:0.24em;">SERVIÇOS</text>
+          </svg>
+          <svg id="logo-compact" viewBox="0 0 46 38" fill="none" xmlns="http://www.w3.org/2000/svg" class="hidden h-8 w-8">
+            <rect x="17" y="7" width="17" height="17" rx="3.5" transform="rotate(45 17 7)" class="stroke-[#243b94] dark:stroke-[#557aff]" stroke-width="3.8"/>
+            <rect x="29" y="7" width="17" height="17" rx="3.5" transform="rotate(45 29 7)" class="stroke-[#118681] dark:stroke-[#23bfb8]" stroke-width="3.8"/>
+            <path d="M25.5 23.5 L21.2 27.8" class="stroke-[#243b94] dark:stroke-[#557aff]" stroke-width="4" stroke-linecap="round"/>
+          </svg>
+        </a>
+      </div>
+
+      <!-- Navegação -->
+      <div class="flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto p-2">
+        <div class="sidebar-label flex h-8 shrink-0 items-center px-2 text-xs font-medium text-sidebar-foreground/70">
+          Navegação
+        </div>
+
+        <ul class="flex flex-col gap-1 text-sm">
+          <li>
+            <button type="button" onclick="showSection('inicio')" id="nav-btn-inicio" class="nav-item w-full flex h-9 items-center gap-2.5 rounded-md bg-sidebar-accent px-2.5 font-medium text-sidebar-accent-foreground transition-colors">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 shrink-0 text-primary" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="7" height="9" x="3" y="3" rx="1"/><rect width="7" height="5" x="14" y="3" rx="1"/><rect width="7" height="9" x="14" y="12" rx="1"/><rect width="7" height="5" x="3" y="16" rx="1"/></svg>
+              <span class="sidebar-label truncate">Início</span>
+            </button>
+          </li>
+          <li>
+            <button type="button" onclick="showSection('acionamentos')" id="nav-btn-acionamentos" class="nav-item w-full flex h-9 items-center gap-2.5 rounded-md px-2.5 text-sidebar-foreground hover:bg-sidebar-accent/60 hover:text-sidebar-accent-foreground transition-colors">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 shrink-0 text-amber-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="2"/><path d="M4.93 19.07A10 10 0 0 1 12 2a10 10 0 0 1 7.07 17.07"/><path d="M7.76 16.24A6 6 0 0 1 12 6a6 6 0 0 1 4.24 10.24"/></svg>
+              <span class="sidebar-label truncate">Acionamentos</span>
+              <span class="sidebar-label ml-auto px-1.5 py-0.2 rounded text-[11px] font-semibold bg-amber-500/20 text-amber-400 tabular-nums">2</span>
+            </button>
+          </li>
+          <li>
+            <button type="button" onclick="showSection('agenda')" id="nav-btn-agenda" class="nav-item w-full flex h-9 items-center gap-2.5 rounded-md px-2.5 text-sidebar-foreground hover:bg-sidebar-accent/60 hover:text-sidebar-accent-foreground transition-colors">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 2v4"/><path d="M16 2v4"/><rect width="18" height="18" x="3" y="4" rx="2"/><path d="M3 10h18"/></svg>
+              <span class="sidebar-label truncate">Agenda</span>
+            </button>
+          </li>
+          <li>
+            <button type="button" onclick="showSection('chat')" id="nav-btn-chat" class="nav-item w-full flex h-9 items-center gap-2.5 rounded-md px-2.5 text-sidebar-foreground hover:bg-sidebar-accent/60 hover:text-sidebar-accent-foreground transition-colors">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 10a2 2 0 0 1-2 2H6.828a2 2 0 0 0-1.414.586l-2.202 2.202A.71.71 0 0 1 2 14.286V4a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/><path d="M20 9a2 2 0 0 1 2 2v10.286a.71.71 0 0 1-1.212.502l-2.202-2.202A2 2 0 0 0 17.172 19H10a2 2 0 0 1-2-2v-1"/></svg>
+              <span class="sidebar-label truncate">Chat interno com responsáveis</span>
+              <span class="sidebar-label ml-auto px-1.5 py-0.2 rounded text-[11px] font-semibold bg-primary/20 text-primary tabular-nums">1</span>
+            </button>
+          </li>
+        </ul>
+      </div>
+
+      <!-- Botão inferior recolher barra lateral -->
+      <div class="hidden items-center justify-center border-t border-sidebar-border py-2 md:flex">
+        <button type="button" onclick="toggleDesktopCollapse()" aria-label="Recolher menu lateral" title="Recolher menu lateral" class="grid h-10 w-10 place-items-center rounded-full border border-primary/30 bg-primary text-primary-foreground shadow-md transition-transform duration-150 hover:scale-105">
+          <svg id="collapse-icon" xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 transition-transform duration-200" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg>
+        </button>
+      </div>
+    </aside>
+
+    <!-- Área Principal -->
+    <div class="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden bg-background">
+      <!-- Header -->
+      <header class="sticky top-0 z-30 flex h-14 shrink-0 items-center gap-2 border-b border-border bg-background/95 px-3 backdrop-blur sm:px-4">
+        <button type="button" onclick="toggleMobileSidebar(true)" aria-label="Abrir menu" class="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-md border border-primary/40 bg-primary/15 text-primary md:hidden">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5h16"/><path d="M4 12h16"/><path d="M4 19h16"/></svg>
+        </button>
+
+        <div class="min-w-0 flex-1">
+          <p id="top-title" class="truncate text-sm font-semibold text-foreground">Início</p>
+          <p class="truncate text-[11px] text-muted-foreground">Ameta · Área autenticada · Disponível em campo</p>
+        </div>
+
+        <button type="button" onclick="toggleTheme()" aria-label="Alternar tema" class="inline-flex h-9 w-9 items-center justify-center rounded-md text-foreground hover:bg-accent">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2"/><path d="M12 20v2"/><path d="m4.93 4.93 1.41 1.41"/><path d="m17.66 17.66 1.41 1.41"/><path d="M2 12h2"/><path d="M20 12h2"/><path d="m6.34 17.66-1.41 1.41"/><path d="m19.07 4.93-1.41 1.41"/></svg>
+        </button>
+
+        <button type="button" class="inline-flex h-9 items-center gap-2 rounded-md px-2 py-1.5 hover:bg-accent">
+          <span class="flex h-7 w-7 items-center justify-center rounded-full bg-secondary text-xs font-semibold">RL</span>
+          <div class="hidden text-left sm:block">
+            <p class="text-xs font-semibold leading-tight text-foreground">Rafael</p>
+            <p class="text-[10px] leading-tight text-muted-foreground">Técnico</p>
+          </div>
+        </button>
+      </header>
+
+      <!-- View: Início -->
+      <main id="section-inicio" class="view-section min-h-0 min-w-0 flex-1 overflow-y-auto px-3 py-4 sm:px-6 sm:py-6 lg:px-8 space-y-6">
+        <header class="grid grid-cols-1 items-start gap-4 border-b border-border pb-5 lg:grid-cols-[minmax(0,1fr)_auto]">
+          <div class="min-w-0">
+            <h1 class="text-xl font-semibold text-foreground sm:text-2xl">Olá, Rafael</h1>
+            <p class="mt-1 text-sm text-muted-foreground">Painel do perfil TECNICO em Ameta · Base Operacional Berrini / SP.</p>
+          </div>
+          <div class="flex items-center gap-2">
+            <span class="rounded bg-secondary px-2.5 py-0.5 text-xs font-semibold">TECNICO</span>
+          </div>
+        </header>
+
+        <!-- KPI Grid -->
+        <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          <div onclick="showSection('agenda')" class="rounded-md border border-border bg-background p-3 cursor-pointer hover:border-primary/40 transition-colors">
+            <p class="text-xs text-muted-foreground">Atendimentos hoje</p>
+            <p class="mt-1 text-2xl font-semibold tabular-nums">4</p>
+          </div>
+          <div onclick="showSection('acionamentos')" class="rounded-md border border-border bg-background p-3 cursor-pointer hover:border-amber-500/50 transition-colors">
+            <p class="text-xs text-muted-foreground">Acionamentos ativos</p>
+            <p class="mt-1 text-2xl font-semibold text-amber-400 tabular-nums">2</p>
+          </div>
+          <div onclick="showSection('acionamentos')" class="rounded-md border border-border bg-background p-3 cursor-pointer hover:border-primary/40 transition-colors">
+            <p class="text-xs text-muted-foreground">Em deslocamento</p>
+            <p class="mt-1 text-2xl font-semibold tabular-nums">0</p>
+          </div>
+          <div onclick="showSection('chat')" class="rounded-md border border-border bg-background p-3 cursor-pointer hover:border-primary/40 transition-colors">
+            <p class="text-xs text-muted-foreground">Mensagens de responsáveis</p>
+            <p class="mt-1 text-2xl font-semibold text-primary tabular-nums">1</p>
+          </div>
+        </div>
+
+        <!-- Acionamento Imediato Destaque -->
+        <section class="rounded-md border border-border bg-background p-4 sm:p-5 space-y-3">
+          <div class="flex items-center justify-between border-b border-border pb-3">
+            <div class="flex items-center gap-2">
+              <span class="size-2 rounded-full bg-amber-400 animate-ping"></span>
+              <h2 class="text-sm font-semibold text-foreground">Acionamento Imediato / Despacho Ativo</h2>
+            </div>
+            <span class="text-xs font-semibold text-amber-400">SLA 1h45m</span>
+          </div>
+          <div>
+            <div class="flex flex-wrap items-center gap-2">
+              <span class="font-semibold text-foreground">AC-2026-001052</span>
+              <span class="text-xs px-2 py-0.5 rounded bg-red-500/20 text-red-400 font-semibold">Prioridade Alta</span>
+              <span class="text-xs px-2 py-0.5 rounded bg-secondary">Emergencial</span>
+            </div>
+            <p class="text-sm font-medium mt-1">Centro Logístico Sul — Galpão 3 · Sala Técnica de Telecom 02</p>
+            <p class="text-xs text-muted-foreground">Av. das Nações Unidas, 12901 - Bloco B, São Paulo - SP</p>
+            <p class="text-xs text-foreground/90 bg-muted/20 p-2.5 rounded border border-border mt-2">
+              Queda intermitente na porta GBIC do switch core. Link redundante de fibra óptica apresentando perda de pacotes (-21.5 dBm).
+            </p>
+          </div>
+          <div class="flex flex-wrap gap-2 pt-1">
+            <button onclick="showSection('acionamentos')" class="h-8 rounded bg-amber-500 hover:bg-amber-600 text-black px-3.5 text-xs font-semibold">Aceitar acionamento</button>
+            <button onclick="showSection('chat')" class="h-8 rounded border border-primary/40 bg-primary/10 text-primary px-3 text-xs font-medium">Falar com Fernanda Costa (Despacho)</button>
+          </div>
+        </section>
+
+        <!-- Agenda Resumo -->
+        <section class="rounded-md border border-border p-4 space-y-2">
+          <div class="flex justify-between items-center border-b border-border pb-2">
+            <h2 class="text-sm font-semibold">Agenda de hoje</h2>
+            <button onclick="showSection('agenda')" class="text-xs text-primary hover:underline">Ver agenda</button>
+          </div>
+          <p class="text-sm tabular-nums">08:30 · AG-2026-000299 · Centro Logístico Sul · Concluído</p>
+          <p class="text-sm tabular-nums">11:30 · AG-2026-000300 · Galpão 3 · Pendente</p>
+          <p class="text-sm tabular-nums">14:30 · AG-2026-000301 · Hospital Santa Helena · Confirmado</p>
+        </section>
+      </main>
+
+      <!-- View: Acionamentos -->
+      <main id="section-acionamentos" class="view-section hidden min-h-0 min-w-0 flex-1 overflow-y-auto px-3 py-4 sm:px-6 sm:py-6 lg:px-8 space-y-5">
+        <div class="flex justify-between items-center border-b border-border pb-3">
+          <div>
+            <h1 class="text-xl font-semibold">Acionamentos de Campo</h1>
+            <p class="text-xs text-muted-foreground">Chamadas técnicas, emergências e gestão de SLA Ameta.</p>
+          </div>
+          <button onclick="showSection('inicio')" class="h-8 px-3 rounded border border-input text-xs font-medium">Voltar ao início</button>
+        </div>
+
+        <div class="space-y-3">
+          <div class="rounded-md border border-border bg-background p-4 space-y-2">
+            <div class="flex justify-between">
+              <span class="font-semibold text-amber-400">AC-2026-001052 · Alta Prioridade</span>
+              <span class="text-xs text-muted-foreground">SLA: 12:00</span>
+            </div>
+            <p class="text-sm font-medium">Centro Logístico Sul · Galpão 3</p>
+            <p class="text-xs text-muted-foreground">Falha de link óptico no switch core. Despachado por Fernanda Costa.</p>
+            <div class="flex gap-2 pt-2">
+              <button class="h-8 px-3 rounded bg-amber-500 text-black text-xs font-semibold">Aceitar</button>
+              <button onclick="showSection('chat')" class="h-8 px-3 rounded border border-input text-xs">Chat com Despacho</button>
+            </div>
+          </div>
+
+          <div class="rounded-md border border-border bg-background p-4 space-y-2">
+            <div class="flex justify-between">
+              <span class="font-semibold text-red-400">AC-2026-001055 · Crítica</span>
+              <span class="text-xs text-muted-foreground">SLA: 15:00</span>
+            </div>
+            <p class="text-sm font-medium">Hospital Santa Helena · Ala Norte (CPD)</p>
+            <p class="text-xs text-muted-foreground">Alarme de sobreaquecimento no nobreak senoidal 10kVA.</p>
+            <div class="flex gap-2 pt-2">
+              <button class="h-8 px-3 rounded bg-primary text-primary-foreground text-xs font-medium">Iniciar deslocamento</button>
+              <button onclick="showSection('chat')" class="h-8 px-3 rounded border border-input text-xs">Apoio Eng. Marcelo</button>
+            </div>
+          </div>
+        </div>
+      </main>
+
+      <!-- View: Agenda -->
+      <main id="section-agenda" class="view-section hidden min-h-0 min-w-0 flex-1 overflow-y-auto px-3 py-4 sm:px-6 sm:py-6 lg:px-8 space-y-5">
+        <div class="flex justify-between items-center border-b border-border pb-3">
+          <div>
+            <h1 class="text-xl font-semibold">Agenda Técnica</h1>
+            <p class="text-xs text-muted-foreground">Visitas programadas e manutenções preventivas.</p>
+          </div>
+          <button onclick="showSection('inicio')" class="h-8 px-3 rounded border border-input text-xs font-medium">Voltar ao início</button>
+        </div>
+
+        <div class="space-y-3">
+          <div class="rounded-md border border-border bg-background p-4 flex justify-between items-center">
+            <div>
+              <p class="font-semibold text-sm">08:30 · AG-2026-000299 · Concluído</p>
+              <p class="text-xs text-muted-foreground">Centro Logístico Sul — Manutenção preventiva switch core</p>
+            </div>
+            <span class="text-xs text-emerald-400 font-medium">Finalizado</span>
+          </div>
+          <div class="rounded-md border border-border bg-background p-4 flex justify-between items-center">
+            <div>
+              <p class="font-semibold text-sm">11:30 · AG-2026-000300 · Pendente</p>
+              <p class="text-xs text-muted-foreground">Centro Logístico Sul — Galpão 3 (Fibra Óptica)</p>
+            </div>
+            <button class="h-8 px-3 rounded bg-primary text-primary-foreground text-xs font-medium">Iniciar</button>
+          </div>
+          <div class="rounded-md border border-border bg-background p-4 flex justify-between items-center">
+            <div>
+              <p class="font-semibold text-sm">14:30 · AG-2026-000301 · Confirmado</p>
+              <p class="text-xs text-muted-foreground">Hospital Santa Helena — Nobreak 10kVA</p>
+            </div>
+            <span class="text-xs text-muted-foreground">Aguardando janela</span>
+          </div>
+        </div>
+      </main>
+
+      <!-- View: Chat -->
+      <main id="section-chat" class="view-section hidden min-h-0 min-w-0 flex-1 overflow-y-auto px-3 py-4 sm:px-6 sm:py-6 lg:px-8 space-y-4">
+        <div class="flex justify-between items-center border-b border-border pb-3">
+          <div>
+            <h1 class="text-xl font-semibold">Chat com Responsáveis</h1>
+            <p class="text-xs text-muted-foreground">Canal de rádio e mensagens com Fernanda Costa, Eng. Marcelo e NOC 24h.</p>
+          </div>
+          <button onclick="showSection('inicio')" class="h-8 px-3 rounded border border-input text-xs font-medium">Voltar ao início</button>
+        </div>
+
+        <div class="rounded-md border border-border bg-sidebar p-4 space-y-3 min-h-[400px] flex flex-col justify-between">
+          <div class="space-y-2">
+            <div class="p-2.5 rounded bg-muted/40 max-w-md text-xs">
+              <span class="font-semibold">Fernanda Costa (Coordenação):</span>
+              <p class="mt-1">Rafael, confirme por favor se você já está a caminho do Galpão 3 para o acionamento AC-2026-001052.</p>
+            </div>
+            <div class="p-2.5 rounded bg-primary/10 max-w-md ml-auto text-xs text-right">
+              <span class="font-semibold">Rafael (Você):</span>
+              <p class="mt-1">A caminho, Fernanda! Previsão de chegada às 11:25 com kit óptico.</p>
+            </div>
+          </div>
+
+          <div class="border-t border-border pt-3 flex gap-2">
+            <input type="text" placeholder="Escreva uma mensagem para a coordenação..." class="h-9 flex-1 rounded border border-input bg-background px-3 text-xs" />
+            <button class="h-9 px-4 rounded bg-primary text-primary-foreground text-xs font-medium">Enviar</button>
+          </div>
+        </div>
+      </main>
+
+      <!-- Rodapé -->
+      <footer class="border-t border-border bg-background px-4 py-3 text-center text-xs text-muted-foreground">
+        © Ameta 2026
+      </footer>
+    </div>
+  </div>
+
+  <script>
+    let sidebarCollapsed = false;
+
+    function toggleDesktopCollapse() {
+      sidebarCollapsed = !sidebarCollapsed;
+      const sidebar = document.getElementById('sidebar');
+      const labels = document.querySelectorAll('.sidebar-label');
+      const logoFull = document.getElementById('logo-full');
+      const logoCompact = document.getElementById('logo-compact');
+      const collapseIcon = document.getElementById('collapse-icon');
+
+      if (sidebarCollapsed) {
+        sidebar.classList.remove('w-64');
+        sidebar.classList.add('w-14');
+        labels.forEach(el => el.classList.add('hidden'));
+        logoFull.classList.add('hidden');
+        logoCompact.classList.remove('hidden');
+        collapseIcon.classList.add('rotate-180');
+      } else {
+        sidebar.classList.remove('w-14');
+        sidebar.classList.add('w-64');
+        labels.forEach(el => el.classList.remove('hidden'));
+        logoFull.classList.remove('hidden');
+        logoCompact.classList.add('hidden');
+        collapseIcon.classList.remove('rotate-180');
+      }
+    }
+
+    function toggleMobileSidebar(open) {
+      const sidebar = document.getElementById('sidebar');
+      const backdrop = document.getElementById('mobile-backdrop');
+      if (open) {
+        sidebar.classList.remove('hidden');
+        sidebar.classList.add('flex');
+        backdrop.classList.remove('hidden');
+      } else {
+        sidebar.classList.add('hidden');
+        sidebar.classList.remove('flex');
+        backdrop.classList.add('hidden');
+      }
+    }
+
+    function showSection(name) {
+      document.querySelectorAll('.view-section').forEach(el => el.classList.add('hidden'));
+      const target = document.getElementById('section-' + name);
+      if (target) target.classList.remove('hidden');
+
+      const titles = {
+        inicio: 'Início',
+        acionamentos: 'Acionamentos',
+        agenda: 'Agenda',
+        chat: 'Chat com responsáveis'
+      };
+      document.getElementById('top-title').innerText = titles[name] || 'Início';
+      toggleMobileSidebar(false);
+    }
+
+    function toggleTheme() {
+      const html = document.documentElement;
+      const isDark = html.classList.toggle('dark');
+      html.dataset.tema = isDark ? 'escuro' : 'claro';
+    }
+  </script>
+</body>
+</html>`;

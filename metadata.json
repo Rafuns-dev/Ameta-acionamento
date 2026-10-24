@@ -1,0 +1,8 @@
+{
+  "name": "TR Dashboard Pro",
+  "description": "A high-performance dark-themed corporate dashboard for tracking technical operations, schedules, and reports in a sleek, responsive interface.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}

@@ -1,0 +1,96 @@
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Plus Jakarta Sans", ui-sans-serif, system-ui, -apple-system, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
+
+  --color-background: var(--bg-canvas);
+  --color-foreground: var(--fg-primary);
+  --color-muted: var(--bg-muted);
+  --color-muted-foreground: var(--fg-muted);
+  --color-border: var(--border-subtle);
+  --color-input: var(--border-input);
+  --color-primary: var(--accent-primary);
+  --color-primary-foreground: var(--accent-primary-fg);
+  --color-secondary: var(--bg-secondary);
+  --color-secondary-foreground: var(--fg-secondary);
+  --color-accent: var(--bg-hover);
+  --color-accent-foreground: var(--fg-primary);
+  --color-sidebar: var(--bg-sidebar);
+  --color-sidebar-foreground: var(--fg-sidebar);
+  --color-sidebar-border: var(--border-sidebar);
+  --color-sidebar-accent: var(--bg-sidebar-active);
+  --color-sidebar-accent-foreground: var(--fg-sidebar-active);
+  --color-ring: var(--accent-primary);
+}
+
+:root {
+  --bg-canvas: #f8fafc;
+  --fg-primary: #0f172a;
+  --bg-muted: #f1f5f9;
+  --fg-muted: #64748b;
+  --border-subtle: #e2e8f0;
+  --border-input: #cbd5e1;
+  --accent-primary: #0284c7;
+  --accent-primary-fg: #ffffff;
+  --bg-secondary: #e2e8f0;
+  --fg-secondary: #1e293b;
+  --bg-hover: #f1f5f9;
+  --bg-sidebar: #ffffff;
+  --fg-sidebar: #334155;
+  --border-sidebar: #e2e8f0;
+  --bg-sidebar-active: #e0f2fe;
+  --fg-sidebar-active: #0369a1;
+}
+
+.dark {
+  --bg-canvas: #0d1218;
+  --fg-primary: #eef2f6;
+  --bg-muted: #141c25;
+  --fg-muted: #8b98a9;
+  --border-subtle: #1e2733;
+  --border-input: #263241;
+  --accent-primary: #5da9d6;
+  --accent-primary-fg: #071018;
+  --bg-secondary: #1c2632;
+  --fg-secondary: #dce5ef;
+  --bg-hover: #16202c;
+  --bg-sidebar: #11161d;
+  --fg-sidebar: #c9d3df;
+  --border-sidebar: #1e2733;
+  --bg-sidebar-active: #172a3c;
+  --fg-sidebar-active: #eef6ff;
+}
+
+@layer base {
+  html {
+    font-family: var(--font-sans);
+    letter-spacing: 0.005em;
+  }
+
+  * {
+    border-color: var(--border-subtle);
+  }
+}
+
+.tabular-nums {
+  font-variant-numeric: tabular-nums;
+}
+
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(139, 152, 169, 0.28);
+  border-radius: 9999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(139, 152, 169, 0.45);
+}
