@@ -33,9 +33,16 @@ export type AcionamentoStatus =
   | 'Cancelado';
 
 export interface AcionamentoHistoryItem {
+  data?: string;
+  autor?: string;
+  email?: string;
+  acao?: string;
   status: string;
-  por: string;
-  em: string;
+  detalhes?: string;
+
+  // Legacy fallback fields for reading old records
+  por?: string;
+  em?: string;
 }
 
 export interface SiteDocument {

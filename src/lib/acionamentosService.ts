@@ -1,15 +1,15 @@
 import { doc, updateDoc } from 'firebase/firestore';
 import { db } from './firebase';
-import { AcionamentoStatus } from '../types';
+import { AcionamentoHistoryItem, AcionamentoStatus } from '../types';
 
 export interface UpdateAcionamentoParams {
   docId: string;
   status: AcionamentoStatus;
   userEmail: string;
   userName: string;
-  existingHistorico?: Array<{ status: string; por: string; em: string }>;
+  existingHistorico?: AcionamentoHistoryItem[];
 
-  // Optional status-specific fields specified in Requirement 6
+  // Optional status-specific fields
   aceitoEm?: string;
   recusadoEm?: string;
   motivoRecusa?: string;
@@ -23,10 +23,12 @@ export interface UpdateAcionamentoParams {
 }
 
 /**
- * Updates an acionamento document in Firestore, strictly writing ONLY the fields allowed by Requirement 6:
- * status, aceitoPorEmail, aceitoPorNome, aceitoEm, atualizadoEm, historico,
- * recusadoPorEmail, recusadoPorNome, recusadoEm, motivoRecusa, checkinEm, checkinLocal,
- * checkoutEm, checkoutLocal, concluidoEm, resumoConclusao, pendencias.
+ * Updates an acionamento document in Firestore:
+ * - All dates written are ISO text strings (new Date().toISOString())
+ * - History entries are written in the exact format:
+ *   { data: ISO, autor: string, email: string, acao: string, status: string, detalhes?: string }
+ *   without 'por' or 'em'
+ * - Strictly updates only fields allowed by Requirement 6
  */
 export async function updateAcionamentoStatusInFirestore(params: UpdateAcionamentoParams): Promise<void> {
   const {
@@ -47,42 +49,61 @@ export async function updateAcionamentoStatusInFirestore(params: UpdateAcionamen
     pendencias,
   } = params;
 
-  const formattedTime = new Date().toLocaleString('pt-BR');
+  const nowIso = new Date().toISOString();
 
-  const newHistoryItem = {
-    status,
-    por: userEmail,
-    em: formattedTime,
+  let acaoText = status as string;
+  if (status === 'Aceito') acaoText = 'Aceito';
+  else if (status === 'Recusado') acaoText = 'Recusado';
+  else if (status === 'Em deslocamento') acaoText = 'Em deslocamento';
+  else if (status === 'No local') acaoText = 'No local (Check-in)';
+  else if (status === 'Em atendimento') acaoText = 'Em atendimento';
+  else if (status === 'Pausado') acaoText = 'Pausado';
+  else if (status === 'Concluído') acaoText = 'Concluído';
+
+  let detalhesText: string | undefined = undefined;
+  if (motivoRecusa) detalhesText = `Motivo: ${motivoRecusa}`;
+  else if (resumoConclusao) detalhesText = `Resumo: ${resumoConclusao}`;
+  else if (checkinLocal) detalhesText = `Check-in local: ${checkinLocal}`;
+
+  const newHistoryItem: AcionamentoHistoryItem = {
+    data: nowIso,
+    autor: userName,
+    email: userEmail.toLowerCase(),
+    acao: acaoText,
+    status: status,
+    ...(detalhesText ? { detalhes: detalhesText } : {}),
   };
 
   const updatedHistorico = [...existingHistorico, newHistoryItem];
 
   const payload: Record<string, any> = {
     status,
-    atualizadoEm: formattedTime,
+    atualizadoEm: nowIso,
     historico: updatedHistorico,
   };
 
   if (status === 'Aceito') {
-    payload.aceitoPorEmail = userEmail;
+    payload.aceitoPorEmail = userEmail.toLowerCase();
     payload.aceitoPorNome = userName;
-    payload.aceitoEm = aceitoEm || formattedTime;
+    payload.aceitoEm = aceitoEm || nowIso;
   }
 
   if (status === 'Recusado') {
-    payload.recusadoPorEmail = userEmail;
+    payload.recusadoPorEmail = userEmail.toLowerCase();
     payload.recusadoPorNome = userName;
-    payload.recusadoEm = recusadoEm || formattedTime;
+    payload.recusadoEm = recusadoEm || nowIso;
     if (motivoRecusa !== undefined) {
       payload.motivoRecusa = motivoRecusa;
     }
   }
 
-  if (checkinEm !== undefined) payload.checkinEm = checkinEm;
+  if (checkinEm !== undefined) payload.checkinEm = checkinEm || nowIso;
   if (checkinLocal !== undefined) payload.checkinLocal = checkinLocal;
-  if (checkoutEm !== undefined) payload.checkoutEm = checkoutEm;
+
+  if (checkoutEm !== undefined) payload.checkoutEm = checkoutEm || nowIso;
   if (checkoutLocal !== undefined) payload.checkoutLocal = checkoutLocal;
-  if (concluidoEm !== undefined) payload.concluidoEm = concluidoEm;
+
+  if (concluidoEm !== undefined) payload.concluidoEm = concluidoEm || nowIso;
   if (resumoConclusao !== undefined) payload.resumoConclusao = resumoConclusao;
   if (pendencias !== undefined) payload.pendencias = pendencias;
 

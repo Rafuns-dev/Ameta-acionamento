@@ -27,6 +27,7 @@ import {
   AcionamentoStatus,
   AuthUser,
 } from '../types';
+import { formatDateTime } from '../utils/dateUtils';
 
 interface AcionamentosViewProps {
   acionamentos: Acionamento[];
@@ -151,9 +152,10 @@ export const AcionamentosView: React.FC<AcionamentosViewProps> = ({
 
     setActionLoading(true);
     try {
+      const nowIso = new Date().toISOString();
       await onUpdateStatusWithPayload(recusarItem.id, 'Recusado', {
         motivoRecusa: motivoRecusaInput.trim(),
-        recusadoEm: new Date().toLocaleString('pt-BR'),
+        recusadoEm: nowIso,
       });
       onToast?.(`Demanda do site ${recusarItem.siteId} recusada.`);
       setRecusarItem(null);
@@ -169,9 +171,9 @@ export const AcionamentosView: React.FC<AcionamentosViewProps> = ({
     if (!checkinItem) return;
     setActionLoading(true);
     try {
-      const formattedTime = new Date().toLocaleString('pt-BR');
+      const nowIso = new Date().toISOString();
       await onUpdateStatusWithPayload(checkinItem.id, 'No local', {
-        checkinEm: formattedTime,
+        checkinEm: nowIso,
         checkinLocal: checkinLocalInput.trim() || checkinItem.endereco || checkinItem.siteNome,
       });
       onToast?.(`Check-in de chegada ao site ${checkinItem.siteId} confirmado!`);
@@ -193,10 +195,10 @@ export const AcionamentosView: React.FC<AcionamentosViewProps> = ({
 
     setActionLoading(true);
     try {
-      const formattedTime = new Date().toLocaleString('pt-BR');
+      const nowIso = new Date().toISOString();
       await onUpdateStatusWithPayload(concluirItem.id, 'Concluído', {
-        concluidoEm: formattedTime,
-        checkoutEm: formattedTime,
+        concluidoEm: nowIso,
+        checkoutEm: nowIso,
         checkoutLocal: concluirItem.endereco || concluirItem.siteNome,
         resumoConclusao: resumoConclusaoInput.trim(),
         pendencias: pendenciasInput.trim() || 'Nenhuma pendência informada.',
@@ -449,7 +451,7 @@ export const AcionamentosView: React.FC<AcionamentosViewProps> = ({
                         <span className="font-bold">Motivo da Recusa: </span>
                         {item.motivoRecusa}
                         <div className="mt-1 text-[11px] opacity-80">
-                          Recusado por: {item.recusadoPorNome || item.recusadoPorEmail} em {item.recusadoEm}
+                          Recusado por: {item.recusadoPorNome || item.recusadoPorEmail} em {formatDateTime(item.recusadoEm)}
                         </div>
                       </div>
                     )}
@@ -468,7 +470,7 @@ export const AcionamentosView: React.FC<AcionamentosViewProps> = ({
                           </div>
                         )}
                         <div className="text-[10px] text-emerald-400/80">
-                          Concluído em: {item.concluidoEm} · Check-in: {item.checkinEm || 'Registrado'}
+                          Concluído em: {formatDateTime(item.concluidoEm)} · Check-in: {formatDateTime(item.checkinEm, 'Registrado')}
                         </div>
                       </div>
                     )}
@@ -480,14 +482,20 @@ export const AcionamentosView: React.FC<AcionamentosViewProps> = ({
                           Histórico de Mudanças no Firebase:
                         </p>
                         <div className="flex flex-wrap gap-1.5">
-                          {item.historico.map((h, idx) => (
-                            <span
-                              key={idx}
-                              className="text-[10px] bg-background border border-border/80 px-2 py-0.5 rounded text-muted-foreground"
-                            >
-                              <strong className="text-foreground">{h.status}</strong> por {h.por.split('@')[0]} ({h.em})
-                            </span>
-                          ))}
+                          {item.historico.map((h, idx) => {
+                            const dateDisplay = formatDateTime(h.data || h.em);
+                            const authorDisplay = h.autor || (h.por ? h.por.split('@')[0] : '') || h.email || 'Usuário';
+                            const acaoDisplay = h.acao || h.status;
+                            return (
+                              <span
+                                key={idx}
+                                className="text-[10px] bg-background border border-border/80 px-2 py-0.5 rounded text-muted-foreground"
+                              >
+                                <strong className="text-foreground">{acaoDisplay}</strong> por {authorDisplay} ({dateDisplay})
+                                {h.detalhes && <span className="text-primary italic font-normal ml-1">({h.detalhes})</span>}
+                              </span>
+                            );
+                          })}
                         </div>
                       </div>
                     )}
@@ -496,7 +504,7 @@ export const AcionamentosView: React.FC<AcionamentosViewProps> = ({
                   {/* Right Column: Status Actions */}
                   <div className="flex flex-col items-start lg:items-end justify-between gap-3 shrink-0 pt-2 lg:pt-0 border-t lg:border-t-0 border-border">
                     <div className="text-left lg:text-right text-[11px] text-muted-foreground">
-                      <div>Demandado em: <span className="font-medium text-foreground">{item.demandadoEm || 'Recentemente'}</span></div>
+                      <div>Demandado em: <span className="font-medium text-foreground">{formatDateTime(item.demandadoEm, item.demandadoEm || 'Recentemente')}</span></div>
                       <div>Por: <span className="font-medium text-foreground">{item.demandadoPorNome || 'Telecom'}</span></div>
                     </div>
 
