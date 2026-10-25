@@ -43,8 +43,7 @@ export const DashboardHome: React.FC<DashboardHomeProps> = ({
   onToast,
 }) => {
   const user = currentUser;
-  const userEmail = (currentUser?.email || '').toLowerCase();
-  const isCoord = userEmail.includes('coord') || userEmail.includes('admin') || userEmail.includes('gerente') || userEmail.includes('gestao') || userEmail.includes('dono') || userEmail.includes('operacao') || userEmail.includes('telecom') || userEmail.includes('ameta');
+  const isCoord = currentUser?.isCoord === true || (currentUser?.email || '').toLowerCase().includes('coord') || (currentUser?.email || '').toLowerCase().includes('admin') || (currentUser?.email || '').toLowerCase().includes('gerente') || (currentUser?.email || '').toLowerCase().includes('gestao') || (currentUser?.email || '').toLowerCase().includes('dono') || (currentUser?.email || '').toLowerCase().includes('operacao');
 
   // Operational real counters calculated directly from user's acionamentos
   const aguardandoCount = acionamentos.filter(

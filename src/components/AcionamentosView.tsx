@@ -79,8 +79,12 @@ export const AcionamentosView: React.FC<AcionamentosViewProps> = ({
 
   const [actionLoading, setActionLoading] = useState(false);
 
-  const userEmail = (currentUser?.email || '').toLowerCase();
-  const isCoord = userEmail.includes('coord') || userEmail.includes('admin') || userEmail.includes('gerente') || userEmail.includes('gestao') || userEmail.includes('dono') || userEmail.includes('operacao') || userEmail.includes('telecom') || userEmail.includes('ameta');
+  const isCoord = currentUser?.isCoord === true || (currentUser?.email || '').toLowerCase().includes('coord') || (currentUser?.email || '').toLowerCase().includes('admin') || (currentUser?.email || '').toLowerCase().includes('gerente') || (currentUser?.email || '').toLowerCase().includes('gestao') || (currentUser?.email || '').toLowerCase().includes('dono') || (currentUser?.email || '').toLowerCase().includes('operacao');
+
+  const [selectedEquipeFilter, setSelectedEquipeFilter] = useState<string>('todas');
+  const uniqueEquipes = Array.from(
+    new Set(acionamentos.map((a) => a.equipe).filter(Boolean))
+  ) as string[];
 
   // Count pending items in 'Aguardando aceite'
   const pendingCount = acionamentos.filter((a) => a.status === 'Aguardando aceite').length;
@@ -104,6 +108,10 @@ export const AcionamentosView: React.FC<AcionamentosViewProps> = ({
       obsStr.toLowerCase().includes(search.toLowerCase());
 
     if (!matchesSearch) return false;
+
+    if (isCoord && selectedEquipeFilter !== 'todas') {
+      if (a.equipe !== selectedEquipeFilter) return false;
+    }
 
     if (filter === 'restantes')
       return a.status === 'Aguardando aceite' || a.status === 'Aceito';
@@ -313,6 +321,44 @@ export const AcionamentosView: React.FC<AcionamentosViewProps> = ({
           />
         </div>
       </div>
+
+      {/* Visão por Equipes para Coordenadores */}
+      {isCoord && uniqueEquipes.length > 0 && (
+        <div className="flex flex-wrap items-center gap-2 rounded-lg border border-border bg-sidebar/50 p-3 text-xs">
+          <span className="font-semibold text-foreground flex items-center gap-1.5">
+            <Users className="size-3.5 text-primary" />
+            <span>Visão por Equipes:</span>
+          </span>
+          <button
+            type="button"
+            onClick={() => setSelectedEquipeFilter('todas')}
+            className={`h-7 rounded px-2.5 text-xs font-medium transition-colors cursor-pointer ${
+              selectedEquipeFilter === 'todas'
+                ? 'bg-primary text-primary-foreground font-semibold'
+                : 'bg-background border border-border text-muted-foreground hover:text-foreground'
+            }`}
+          >
+            Todas as Equipes ({acionamentos.length})
+          </button>
+          {uniqueEquipes.map((eq) => {
+            const count = acionamentos.filter((a) => a.equipe === eq).length;
+            return (
+              <button
+                key={eq}
+                type="button"
+                onClick={() => setSelectedEquipeFilter(eq)}
+                className={`h-7 rounded px-2.5 text-xs font-medium transition-colors cursor-pointer ${
+                  selectedEquipeFilter === eq
+                    ? 'bg-primary text-primary-foreground font-semibold'
+                    : 'bg-background border border-border text-muted-foreground hover:text-foreground'
+                }`}
+              >
+                {eq} ({count})
+              </button>
+            );
+          })}
+        </div>
+      )}
 
       {/* Loading state indicator */}
       {isLoadingFirestore && (

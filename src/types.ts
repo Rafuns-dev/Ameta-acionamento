@@ -147,6 +147,7 @@ export interface AuthUser {
   fullName: string;
   roleBadge?: string;
   roleLabel?: string;
+  isCoord?: boolean;
   company?: string;
   companyFull?: string;
   registration?: string;

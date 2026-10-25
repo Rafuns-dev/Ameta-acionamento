@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { onAuthStateChanged, signOut } from 'firebase/auth';
-import { collection, onSnapshot, query, where } from 'firebase/firestore';
+import { collection, getDocs, onSnapshot, query, where } from 'firebase/firestore';
 import { auth, db } from './lib/firebase';
 import { updateAcionamentoStatusInFirestore } from './lib/acionamentosService';
 import {
@@ -74,7 +74,7 @@ export default function App() {
 
   // Listen to Firebase Auth state
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (fbUser) => {
+    const unsubscribe = onAuthStateChanged(auth, async (fbUser) => {
       if (fbUser && fbUser.email) {
         const email = fbUser.email.toLowerCase();
         const emailPrefix = email.split('@')[0];
@@ -91,9 +91,63 @@ export default function App() {
           (initialsParts[1]?.charAt(0) || '')
         ).toUpperCase() || 'AM';
 
-        const isCoord = email.includes('coord') || email.includes('admin') || email.includes('gerente') || email.includes('gestao') || email.includes('dono') || email.includes('operacao') || email.includes('telecom') || email.includes('ameta');
-        const roleBadge = isCoord ? 'Coordenador / Gestor' : 'Técnico de Campo';
-        const roleLabel = isCoord ? 'Coordenação & Donos (Permissão de Alteração)' : 'Equipe de Vistoria';
+        let dbRole = '';
+        let dbPerfil = '';
+        let isCoordDb = false;
+
+        try {
+          const qUsers = query(collection(db, 'usuarios'), where('email', '==', email));
+          const querySnap = await getDocs(qUsers);
+          if (!querySnap.empty) {
+            const userData = querySnap.docs[0].data();
+            dbRole = (userData.role || userData.perfil || userData.tipo || userData.cargo || '').toLowerCase();
+            dbPerfil = userData.perfil || userData.role || '';
+            isCoordDb = 
+              dbRole.includes('coord') || 
+              dbRole.includes('admin') || 
+              dbRole.includes('gerente') || 
+              dbRole.includes('gestor') || 
+              dbRole.includes('dono') ||
+              userData.isAdmin === true || 
+              userData.isCoordenador === true || 
+              userData.coordenador === true ||
+              userData.admin === true;
+          } else {
+            const qUsers2 = query(collection(db, 'users'), where('email', '==', email));
+            const querySnap2 = await getDocs(qUsers2);
+            if (!querySnap2.empty) {
+              const userData2 = querySnap2.docs[0].data();
+              dbRole = (userData2.role || userData2.perfil || userData2.tipo || userData2.cargo || '').toLowerCase();
+              dbPerfil = userData2.perfil || userData2.role || '';
+              isCoordDb = 
+                dbRole.includes('coord') || 
+                dbRole.includes('admin') || 
+                dbRole.includes('gerente') || 
+                dbRole.includes('gestor') || 
+                dbRole.includes('dono') ||
+                userData2.isAdmin === true || 
+                userData2.isCoordenador === true || 
+                userData2.coordenador === true ||
+                userData2.admin === true;
+            }
+          }
+        } catch (e) {
+          console.error('Error checking Firestore user permissions:', e);
+        }
+
+        const isCoordEmail = 
+          email.includes('coord') || 
+          email.includes('admin') || 
+          email.includes('gerente') || 
+          email.includes('gestao') || 
+          email.includes('dono') || 
+          email.includes('diretor') || 
+          email.includes('operacao');
+
+        const isCoord = isCoordDb || isCoordEmail;
+
+        const roleBadge = isCoord ? (dbPerfil || 'Coordenador / Gestor') : 'Técnico de Campo';
+        const roleLabel = isCoord ? 'Coordenação & Donos (Acesso Total)' : 'Equipe de Vistoria';
 
         const userFromAuth: AuthUser = {
           id: fbUser.uid,
@@ -103,6 +157,7 @@ export default function App() {
           initials,
           roleBadge,
           roleLabel,
+          isCoord,
           avatarColor: isCoord ? 'bg-amber-600' : 'bg-emerald-600',
         };
         setCurrentUser(userFromAuth);
