@@ -1,9 +1,11 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Bell, CheckCheck, Code2, Globe, Menu, Moon, Sun, UserCheck } from 'lucide-react';
-import { AppNotification, NavSection } from '../types';
+import { Bell, CheckCheck, Code2, Globe, LogOut, Menu, Moon, Sun, UserCheck } from 'lucide-react';
+import { AppNotification, AuthUser, NavSection } from '../types';
 import { USER_PROFILE } from '../data/initialData';
 
 interface HeaderProps {
+  currentUser?: AuthUser;
+  onLogout: () => void;
   activeSection: NavSection;
   theme: 'escuro' | 'claro';
   onToggleTheme: () => void;
@@ -23,6 +25,8 @@ const SECTION_TITLES: Record<NavSection, string> = {
 };
 
 export const Header: React.FC<HeaderProps> = ({
+  currentUser,
+  onLogout,
   activeSection,
   theme,
   onToggleTheme,
@@ -38,6 +42,7 @@ export const Header: React.FC<HeaderProps> = ({
   const notifRef = useRef<HTMLDivElement>(null);
   const profileRef = useRef<HTMLDivElement>(null);
 
+  const user = currentUser || USER_PROFILE;
   const unreadNotifications = notifications.filter((n) => !n.read).length;
 
   useEffect(() => {
@@ -79,8 +84,6 @@ export const Header: React.FC<HeaderProps> = ({
           </span>
         </div>
       </div>
-
-
 
       {/* Standalone Single-File HTML Export Trigger */}
       <button
@@ -180,30 +183,37 @@ export const Header: React.FC<HeaderProps> = ({
           aria-expanded={profileOpen}
           className="inline-flex h-9 items-center gap-2 rounded-md px-2 py-1.5 text-sm font-medium transition-colors hover:bg-accent hover:text-accent-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring cursor-pointer"
         >
-          <span className="relative flex size-7 shrink-0 items-center justify-center overflow-hidden rounded-full border border-border bg-secondary text-secondary-foreground font-semibold text-xs">
-            RL
+          <span className={`relative flex size-7 shrink-0 items-center justify-center overflow-hidden rounded-full font-bold text-xs text-white ${user.avatarColor || 'bg-primary'}`}>
+            {user.initials || 'AM'}
           </span>
           <div className="hidden text-left sm:block">
-            <p className="text-xs font-semibold leading-tight text-foreground">
-              {USER_PROFILE.shortName}
+            <p className="text-xs font-semibold leading-tight text-foreground truncate max-w-[130px]">
+              {user.shortName}
             </p>
-            <p className="text-[10px] leading-tight text-muted-foreground">
-              {USER_PROFILE.roleLabel}
+            <p className="text-[10px] leading-tight text-muted-foreground truncate max-w-[130px]">
+              {user.roleLabel}
             </p>
           </div>
         </button>
 
         {profileOpen && (
-          <div className="absolute right-0 mt-2 w-64 rounded-md border border-border bg-sidebar p-3 shadow-xl z-50">
+          <div className="absolute right-0 mt-2 w-72 rounded-md border border-border bg-sidebar p-3 shadow-xl z-50">
             <div className="border-b border-border pb-2.5">
-              <p className="text-xs font-semibold text-foreground">
-                {USER_PROFILE.fullName}
-              </p>
-              <p className="mt-0.5 text-[11px] text-muted-foreground">
-                {USER_PROFILE.email}
-              </p>
+              <div className="flex items-center gap-2 mb-1.5">
+                <span className={`flex size-7 shrink-0 items-center justify-center rounded-full text-xs font-bold text-white shadow-xs ${user.avatarColor || 'bg-primary'}`}>
+                  {user.initials}
+                </span>
+                <div className="min-w-0">
+                  <p className="text-xs font-semibold text-foreground truncate">
+                    {user.fullName}
+                  </p>
+                  <p className="text-[11px] text-muted-foreground truncate">
+                    {user.email}
+                  </p>
+                </div>
+              </div>
               <p className="mt-1 text-[11px] text-muted-foreground">
-                {USER_PROFILE.roleBadge} · {USER_PROFILE.company} · {USER_PROFILE.registration}
+                <span className="font-semibold text-foreground/90">{user.roleBadge}</span> · {user.company} · {user.registration}
               </p>
             </div>
 
@@ -254,6 +264,21 @@ export const Header: React.FC<HeaderProps> = ({
                   <span>Integração de Sistemas</span>
                 </button>
               )}
+
+              {/* Logout button */}
+              <div className="mt-1 pt-1 border-t border-border">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setProfileOpen(false);
+                    onLogout();
+                  }}
+                  className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-xs font-semibold text-destructive hover:bg-destructive/10 cursor-pointer transition-colors"
+                >
+                  <LogOut className="size-3.5 text-destructive" />
+                  <span>Sair da conta (Logout)</span>
+                </button>
+              </div>
             </div>
           </div>
         )}

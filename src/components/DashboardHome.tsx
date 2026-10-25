@@ -17,6 +17,7 @@ import {
 import {
   Acionamento,
   AgendaItem,
+  AuthUser,
   Executor,
   NavSection,
   ReportItem,
@@ -25,6 +26,7 @@ import {
 import { USER_PROFILE } from '../data/initialData';
 
 interface DashboardHomeProps {
+  currentUser?: AuthUser;
   agenda: AgendaItem[];
   acionamentos: Acionamento[];
   responsibles: ResponsiblePerson[];
@@ -45,6 +47,7 @@ interface DashboardHomeProps {
 }
 
 export const DashboardHome: React.FC<DashboardHomeProps> = ({
+  currentUser,
   agenda,
   acionamentos,
   responsibles,
@@ -60,6 +63,7 @@ export const DashboardHome: React.FC<DashboardHomeProps> = ({
   onContinueReport,
   onToast,
 }) => {
+  const user = currentUser || USER_PROFILE;
   // Operational counters as requested by user:
   // "site em atendimento, sites restantes, em deslocamento, menssagens tecnico"
   const sitesEmAtendimento = acionamentos.filter(
@@ -106,17 +110,17 @@ export const DashboardHome: React.FC<DashboardHomeProps> = ({
         <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-2">
             <h1 className="break-words text-xl font-semibold text-foreground sm:text-2xl">
-              Olá, {USER_PROFILE.shortName}
+              Olá, {user.shortName}
             </h1>
             <span className="inline-flex items-center rounded-md bg-primary/15 px-2 py-0.5 text-xs font-semibold text-primary">
-              {USER_PROFILE.roleBadge}
+              {user.roleBadge}
             </span>
             <span className="inline-flex items-center rounded-md bg-secondary px-2 py-0.5 text-xs font-medium text-secondary-foreground">
               Vistorias & Rotas
             </span>
           </div>
           <p className="mt-1 max-w-2xl break-words text-sm text-muted-foreground">
-            Painel do {USER_PROFILE.roleLabel} em {USER_PROFILE.companyFull} · {USER_PROFILE.base}.
+            Painel do {user.roleLabel} em {user.companyFull} · {user.base}.
           </p>
         </div>
 
@@ -346,12 +350,12 @@ export const DashboardHome: React.FC<DashboardHomeProps> = ({
                   </span>
                   <button
                     type="button"
-                    onClick={() => handleCopy(prioritySite.coordinates, 'Coordenadas GPS')}
+                    onClick={() => handleCopy(prioritySite.coordinates || '', 'Coordenadas GPS')}
                     className="flex items-center gap-1 hover:text-foreground cursor-pointer text-primary"
                     title="Copiar Coordenadas GPS"
                   >
                     <Compass className="size-3" />
-                    <span>GPS: {prioritySite.coordinates}</span>
+                    <span>GPS: {prioritySite.coordinates || 'N/A'}</span>
                     <Copy className="size-3" />
                   </button>
                 </div>
@@ -359,7 +363,7 @@ export const DashboardHome: React.FC<DashboardHomeProps> = ({
                 <div className="flex items-center gap-2 text-xs rounded-md bg-muted/40 px-2.5 py-1.5 border border-border/80 w-fit">
                   <Key className="size-3.5 text-amber-400 shrink-0" />
                   <span className="font-medium text-foreground">
-                    Acesso / Chave: {prioritySite.accessKeyProtocol}
+                    Acesso / Chave: {prioritySite.accessKeyProtocol || 'Acesso liberado NOC'}
                   </span>
                 </div>
               </div>
@@ -370,10 +374,10 @@ export const DashboardHome: React.FC<DashboardHomeProps> = ({
                   <span>Limite de SLA da Vistoria</span>
                 </p>
                 <p className="text-xs font-semibold text-amber-400 tabular-nums mt-0.5">
-                  {prioritySite.slaLimit}
+                  {prioritySite.slaLimit || 'SLA Padrao'}
                 </p>
                 <p className="text-[10px] text-muted-foreground mt-1">
-                  Despacho: {prioritySite.dispatcher.name}
+                  Despacho: {prioritySite.dispatcher?.name || 'Central NOC'}
                 </p>
               </div>
             </div>
@@ -496,14 +500,14 @@ export const DashboardHome: React.FC<DashboardHomeProps> = ({
                 type="button"
                 onClick={() =>
                   onStartChatWith(
-                    prioritySite.dispatcher.responsibleId,
+                    prioritySite.dispatcher?.responsibleId || 'resp-fernanda',
                     `Olá, sobre a vistoria na torre ${prioritySite.siteId} (${prioritySite.siteName}): `
                   )
                 }
                 className="inline-flex h-8 items-center gap-1.5 rounded-md border border-primary/40 bg-primary/10 text-primary hover:bg-primary/20 px-3 text-xs font-medium cursor-pointer"
               >
                 <MessageSquare className="size-3.5" />
-                <span>Falar com {prioritySite.dispatcher.name}</span>
+                <span>Falar com {prioritySite.dispatcher?.name || 'Despacho'}</span>
               </button>
             </div>
           </div>

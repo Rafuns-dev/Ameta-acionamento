@@ -24,11 +24,19 @@ export type SurveyType =
 export type AcionamentoStatus =
   | 'Aguardando aceite'
   | 'Aceito'
+  | 'Recusado'
   | 'Em deslocamento'
   | 'No local'
   | 'Em atendimento'
   | 'Pausado'
-  | 'Concluído';
+  | 'Concluído'
+  | 'Cancelado';
+
+export interface AcionamentoHistoryItem {
+  status: string;
+  por: string;
+  em: string;
+}
 
 export interface SiteDocument {
   id: string;
@@ -73,36 +81,71 @@ export interface DisplacementInfo {
 
 export interface Acionamento {
   id: string;
-  protocol: string;
+
+  // Real Telecom Firestore Fields
+  protocolo: string;
+  protocol?: string;
+  origem?: string;
+  vendor?: 'NOKIA' | 'ERICSSON' | string;
+  siteId: string;
+  siteNome: string;
+  siteName?: string;
+  endereco: string;
+  address?: string;
+  cidade?: string;
+  uf?: string;
+  tipoDestinatario?: string;
+  equipe?: string;
+  destinatariosEmails?: string[];
+  status: AcionamentoStatus;
+  demandadoPorNome?: string;
+  demandadoPorEmail?: string;
+  demandadoEm?: string;
+  observacao?: string;
+  aceitoPorEmail?: string;
+  aceitoPorNome?: string;
+  aceitoEm?: string;
+  atualizadoEm?: string;
+  historico?: AcionamentoHistoryItem[];
+
+  recusadoPorEmail?: string;
+  recusadoPorNome?: string;
+  recusadoEm?: string;
+  motivoRecusa?: string;
+  checkinEm?: string;
+  checkinLocal?: string;
+  checkoutEm?: string;
+  checkoutLocal?: string;
+  concluidoEm?: string;
+  resumoConclusao?: string;
+  pendencias?: string;
+
+  // UI Fallbacks
   externalId?: string;
   externalSystem?: string;
   syncedAt?: string;
-  siteId: string; // Ex: SP-SPO-0842 (ID da Torre)
-  siteName: string; // Ex: Torre Morumbi Sul
-  towerType: TowerType;
-  towerHeightMeters: number;
-  operator: string; // Ex: Vivo / Telefônica, American Tower, Claro, TIM
-  coordinates: string; // Ex: -23.6214, -46.6980
-  address: string;
-  accessKeyProtocol: string; // Ex: Cadeado segredo 8841 ou chave na portaria
-  contactName: string;
-  contactPhone: string;
-  priority: AcionamentoPriority;
-  type: SurveyType;
-  status: AcionamentoStatus;
-  requestedAt: string;
-  slaLimit: string;
-  slaRemainingMinutes: number;
-  problemDescription: string;
-  systemEquipment: string;
-  dispatcher: {
+  towerType?: TowerType | string;
+  towerHeightMeters?: number;
+  operator?: string;
+  coordinates?: string;
+  accessKeyProtocol?: string;
+  contactName?: string;
+  contactPhone?: string;
+  priority?: AcionamentoPriority;
+  type?: SurveyType | string;
+  requestedAt?: string;
+  slaLimit?: string;
+  slaRemainingMinutes?: number;
+  problemDescription?: string;
+  systemEquipment?: string;
+  dispatcher?: {
     responsibleId: string;
     name: string;
     role: string;
   };
-  notes: string[];
-  executors: Executor[];
-  documents: SiteDocument[];
+  notes?: string[];
+  executors?: Executor[];
+  documents?: SiteDocument[];
   checklistItems?: { id: string; title: string; checked: boolean }[];
   checkinTime?: string;
   checkoutTime?: string;
@@ -200,3 +243,22 @@ export interface IntegrationConfig {
   lastSyncTime: string;
   syncLogs: SyncLogEntry[];
 }
+
+export interface AuthUser {
+  id: string;
+  email: string;
+  password?: string;
+  shortName: string;
+  fullName: string;
+  roleBadge: string;
+  roleLabel: string;
+  company: string;
+  companyFull: string;
+  registration: string;
+  base: string;
+  initials: string;
+  avatarColor: string;
+  specialties?: string[];
+  phone?: string;
+}
+

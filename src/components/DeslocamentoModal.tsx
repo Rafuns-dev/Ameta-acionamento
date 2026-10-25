@@ -71,9 +71,9 @@ export const DeslocamentoModal: React.FC<DeslocamentoModalProps> = ({
     estimatedArrival: '11:10 (~25 min restantes)',
     estimatedDistanceKm: 18.4,
     trafficCondition: 'Trânsito moderado na Marginal Tietê (fluxo normal após Ponte das Bandeiras)',
-    routeSummary: 'Via Av. 23 de Maio → Corredor Norte-Sul → Marginal Tietê → Santana',
-    wazeUrl: currentSite ? `https://waze.com/ul?ll=${encodeURIComponent(currentSite.coordinates)}&navigate=yes` : '',
-    mapsUrl: currentSite ? `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(currentSite.coordinates)}` : '',
+    routeSummary: 'Via Av. 23 de Maio → Corredor Norte-Sul → Marginal Tietê',
+    wazeUrl: currentSite ? `https://waze.com/ul?ll=${encodeURIComponent(currentSite.coordinates || currentSite.endereco || '')}&navigate=yes` : '',
+    mapsUrl: currentSite ? `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(currentSite.coordinates || currentSite.endereco || '')}` : '',
   };
 
   const handleConfirmArrival = () => {
@@ -206,7 +206,7 @@ export const DeslocamentoModal: React.FC<DeslocamentoModalProps> = ({
                       type="button"
                       onClick={() =>
                         handleCopy(
-                          currentSite.accessKeyProtocol,
+                          currentSite.accessKeyProtocol || 'Acesso liberado NOC',
                           'Protocolo de acesso'
                         )
                       }
@@ -224,16 +224,16 @@ export const DeslocamentoModal: React.FC<DeslocamentoModalProps> = ({
                         Contato de Campo / Portaria:
                       </span>
                       <p className="font-medium text-foreground text-xs">
-                        {currentSite.contactName}
+                        {currentSite.contactName || 'Despacho Central'}
                       </p>
                       <p className="text-[11px] text-muted-foreground">
-                        {currentSite.contactPhone}
+                        {currentSite.contactPhone || '0800 770 2026'}
                       </p>
                     </div>
                     <button
                       type="button"
                       onClick={() =>
-                        handleCopy(currentSite.contactPhone, 'Telefone de contato')
+                        handleCopy(currentSite.contactPhone || '0800 770 2026', 'Telefone de contato')
                       }
                       className="p-1 rounded hover:bg-accent text-primary cursor-pointer shrink-0"
                       title="Copiar Telefone"
@@ -310,12 +310,12 @@ export const DeslocamentoModal: React.FC<DeslocamentoModalProps> = ({
                       </span>
                       <div className="flex items-center gap-1.5 font-mono text-[11px] text-primary">
                         <Compass className="size-3" />
-                        <span>{currentSite.coordinates}</span>
+                        <span>{currentSite.coordinates || 'GPS N/A'}</span>
                         <button
                           type="button"
                           onClick={() =>
                             handleCopy(
-                              currentSite.coordinates,
+                              currentSite.coordinates || '',
                               'Coordenadas GPS'
                             )
                           }
@@ -332,7 +332,7 @@ export const DeslocamentoModal: React.FC<DeslocamentoModalProps> = ({
                 <div className="flex flex-wrap items-center gap-2 pt-2 border-t border-border/80">
                   <a
                     href={`https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(
-                      currentSite.coordinates || currentSite.address
+                      currentSite.coordinates || currentSite.address || currentSite.endereco || ''
                     )}`}
                     target="_blank"
                     rel="noopener noreferrer"
@@ -344,7 +344,7 @@ export const DeslocamentoModal: React.FC<DeslocamentoModalProps> = ({
 
                   <a
                     href={`https://waze.com/ul?ll=${encodeURIComponent(
-                      currentSite.coordinates
+                      currentSite.coordinates || currentSite.address || currentSite.endereco || ''
                     )}&navigate=yes`}
                     target="_blank"
                     rel="noopener noreferrer"
@@ -357,7 +357,7 @@ export const DeslocamentoModal: React.FC<DeslocamentoModalProps> = ({
                   <button
                     type="button"
                     onClick={() =>
-                      handleCopy(currentSite.address, 'Endereço completo')
+                      handleCopy(currentSite.address || currentSite.endereco || '', 'Endereço completo')
                     }
                     className="inline-flex h-8 items-center gap-1.5 rounded-md border border-border bg-sidebar hover:bg-accent px-3 text-xs font-medium text-foreground cursor-pointer transition-colors"
                   >
@@ -442,7 +442,7 @@ export const DeslocamentoModal: React.FC<DeslocamentoModalProps> = ({
                 type="button"
                 onClick={() =>
                   onOpenChatWithDispatcher(
-                    currentSite.dispatcher.responsibleId,
+                    currentSite.dispatcher?.responsibleId || 'resp-fernanda',
                     `Olá, estou em deslocamento para a torre ${currentSite.siteId} (${currentSite.siteName}). Previsão de chegada em ~25 minutos.`
                   )
                 }
