@@ -17,8 +17,8 @@ interface HeaderProps {
 
 const SECTION_TITLES: Record<NavSection, string> = {
   [NavSection.INICIO]: 'Início',
-  [NavSection.ACIONAMENTOS]: 'Acionamentos',
-  [NavSection.AGENDA]: 'Agenda',
+  [NavSection.ACIONAMENTOS]: 'Vistorias em Sites & Torres',
+  [NavSection.AGENDA]: 'Agenda de Vistorias em Campo',
   [NavSection.CHAT_RESPONSAVEIS]: 'Chat interno com responsáveis',
 };
 
@@ -71,7 +71,7 @@ export const Header: React.FC<HeaderProps> = ({
           {SECTION_TITLES[activeSection]}
         </p>
         <div className="flex items-center gap-2 text-[11px] text-muted-foreground truncate">
-          <span>Ameta · Área autenticada</span>
+          <span>Ameta Telecom · Vistorias de Campo</span>
           <span className="hidden sm:inline">·</span>
           <span className="hidden sm:inline-flex items-center gap-1 text-emerald-400">
             <span className="size-1.5 rounded-full bg-emerald-400"></span>
@@ -80,21 +80,7 @@ export const Header: React.FC<HeaderProps> = ({
         </div>
       </div>
 
-      {/* Conectar com Outro Sistema Trigger */}
-      <button
-        type="button"
-        onClick={onOpenIntegrationModal}
-        title="Configurar integração com o outro sistema (API REST, Webhooks e sincronização de demandas)"
-        className="inline-flex h-8 items-center gap-1.5 rounded-md border border-primary/40 bg-primary/10 px-2.5 text-xs font-medium text-primary transition-colors hover:bg-primary/20 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring whitespace-nowrap shrink-0 cursor-pointer"
-      >
-        <span className="relative flex size-2">
-          <span className="absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75 animate-ping"></span>
-          <span className="relative inline-flex size-2 rounded-full bg-emerald-500"></span>
-        </span>
-        <Globe className="size-3.5" />
-        <span className="hidden sm:inline">Conectar Outro Sistema</span>
-        <span className="sm:hidden">Integrar</span>
-      </button>
+
 
       {/* Standalone Single-File HTML Export Trigger */}
       <button
@@ -255,6 +241,19 @@ export const Header: React.FC<HeaderProps> = ({
                 <Code2 className="size-3.5 text-primary" />
                 <span>Exportar HTML Único (CDN)</span>
               </button>
+              {onOpenIntegrationModal && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setProfileOpen(false);
+                    onOpenIntegrationModal();
+                  }}
+                  className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-xs text-foreground hover:bg-accent cursor-pointer whitespace-nowrap"
+                >
+                  <Globe className="size-3.5 text-primary" />
+                  <span>Integração de Sistemas</span>
+                </button>
+              )}
             </div>
           </div>
         )}

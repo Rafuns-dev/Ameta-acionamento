@@ -205,30 +205,43 @@
         <header class="grid grid-cols-1 items-start gap-4 border-b border-border pb-5 lg:grid-cols-[minmax(0,1fr)_auto]">
           <div class="min-w-0">
             <h1 class="text-xl font-semibold text-foreground sm:text-2xl">Olá, Rafael</h1>
-            <p class="mt-1 text-sm text-muted-foreground">Painel do perfil TECNICO em Ameta · Base Operacional Berrini / SP.</p>
+            <p class="mt-1 text-sm text-muted-foreground">Painel do perfil VISTORIADOR em Ameta Telecom · Base Operacional Berrini / SP.</p>
           </div>
           <div class="flex items-center gap-2">
-            <span class="rounded bg-secondary px-2.5 py-0.5 text-xs font-semibold">TECNICO</span>
+            <span class="rounded bg-primary/20 text-primary px-2.5 py-0.5 text-xs font-semibold">VISTORIADOR</span>
+            <span class="rounded bg-secondary px-2.5 py-0.5 text-xs font-semibold">NR-35 · NR-10</span>
           </div>
         </header>
 
-        <!-- KPI Grid -->
+        <!-- KPI Grid Telecom -->
         <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-          <div onclick="showSection('agenda')" class="rounded-md border border-border bg-background p-3 cursor-pointer hover:border-primary/40 transition-colors">
-            <p class="text-xs text-muted-foreground">Atendimentos hoje</p>
-            <p class="mt-1 text-2xl font-semibold tabular-nums">4</p>
+          <div onclick="showSection('acionamentos')" class="rounded-md border border-border bg-background p-3 cursor-pointer hover:border-emerald-500/50 transition-colors">
+            <p class="text-xs text-muted-foreground">Site em atendimento</p>
+            <div class="mt-1 flex items-baseline justify-between">
+              <span class="text-2xl font-semibold tabular-nums text-emerald-400">1</span>
+              <span class="text-xs text-emerald-400 font-medium">Torre Morumbi</span>
+            </div>
           </div>
           <div onclick="showSection('acionamentos')" class="rounded-md border border-border bg-background p-3 cursor-pointer hover:border-amber-500/50 transition-colors">
-            <p class="text-xs text-muted-foreground">Acionamentos ativos</p>
-            <p class="mt-1 text-2xl font-semibold text-amber-400 tabular-nums">2</p>
+            <p class="text-xs text-muted-foreground">Sites restantes</p>
+            <div class="mt-1 flex items-baseline justify-between">
+              <span class="text-2xl font-semibold text-amber-400 tabular-nums">2</span>
+              <span class="text-xs text-amber-400/80">Na fila hoje</span>
+            </div>
           </div>
-          <div onclick="showSection('acionamentos')" class="rounded-md border border-border bg-background p-3 cursor-pointer hover:border-primary/40 transition-colors">
+          <div onclick="showSection('acionamentos')" class="rounded-md border border-border bg-background p-3 cursor-pointer hover:border-primary/50 transition-colors">
             <p class="text-xs text-muted-foreground">Em deslocamento</p>
-            <p class="mt-1 text-2xl font-semibold tabular-nums">0</p>
+            <div class="mt-1 flex items-baseline justify-between">
+              <span class="text-2xl font-semibold tabular-nums text-primary">1</span>
+              <span class="text-xs text-primary font-medium">Santana Rooftop</span>
+            </div>
           </div>
-          <div onclick="showSection('chat')" class="rounded-md border border-border bg-background p-3 cursor-pointer hover:border-primary/40 transition-colors">
-            <p class="text-xs text-muted-foreground">Mensagens de responsáveis</p>
-            <p class="mt-1 text-2xl font-semibold text-primary tabular-nums">1</p>
+          <div onclick="showSection('chat')" class="rounded-md border border-border bg-background p-3 cursor-pointer hover:border-primary/50 transition-colors">
+            <p class="text-xs text-muted-foreground">Mensagens técnico</p>
+            <div class="mt-1 flex items-baseline justify-between">
+              <span class="text-2xl font-semibold text-primary tabular-nums">1</span>
+              <span class="text-xs text-primary font-medium">Despacho / NOC</span>
+            </div>
           </div>
         </div>
 

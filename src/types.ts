@@ -1,18 +1,25 @@
 export enum NavSection {
   INICIO = 'inicio',
-  ACIONAMENTOS = 'acionamentos',
+  ACIONAMENTOS = 'acionamentos', // Vistorias & Demandas em Sites
   AGENDA = 'agenda',
   CHAT_RESPONSAVEIS = 'chat_responsaveis',
 }
 
 export type AcionamentoPriority = 'Crítica' | 'Alta' | 'Média' | 'Normal';
 
-export type AcionamentoType =
-  | 'Emergencial'
-  | 'Preventiva'
-  | 'Corretiva'
-  | 'Suporte VIP'
-  | 'Ronda Técnica';
+export type TowerType =
+  | 'Autoportante'
+  | 'Estaiada'
+  | 'Rooftop (Topo de Prédio)'
+  | 'Monopolo'
+  | 'Greenfield (Solo Rural)';
+
+export type SurveyType =
+  | 'Vistoria Estrutural'
+  | 'Vistoria de Infra & Energia'
+  | 'Compartilhamento (Colocation)'
+  | 'Auditoria Preventiva'
+  | 'Emergencial / Vandalismo';
 
 export type AcionamentoStatus =
   | 'Aguardando aceite'
@@ -23,19 +30,65 @@ export type AcionamentoStatus =
   | 'Pausado'
   | 'Concluído';
 
+export interface SiteDocument {
+  id: string;
+  code: string;
+  name: string;
+  category: 'Técnico / Vistoria' | 'Acesso & Autorização' | 'Fotos & Evidências';
+  status: 'Válido' | 'Pendente' | 'Em conferência';
+  uploadedAt?: string;
+  fileSize?: string;
+  fileType?: string;
+  notes?: string;
+}
+
+export interface Executor {
+  id: string;
+  name: string;
+  role:
+    | 'Vistoriador Líder'
+    | 'Vistoriador de Campo'
+    | 'Escalador / Alpinista Industrial'
+    | 'Eletricista de Telecom'
+    | 'Técnico de Infraestrutura';
+  cpfMasked: string;
+  company: string;
+  phone: string;
+  status: 'Liberado' | 'Em campo' | 'Disponível';
+}
+
+export interface DisplacementInfo {
+  origin: string;
+  destination: string;
+  vehicle: string;
+  driver: string;
+  departureTime: string;
+  estimatedArrival: string;
+  estimatedDistanceKm: number;
+  trafficCondition: string;
+  routeSummary: string;
+  wazeUrl?: string;
+  mapsUrl?: string;
+}
+
 export interface Acionamento {
   id: string;
   protocol: string;
   externalId?: string;
   externalSystem?: string;
   syncedAt?: string;
-  client: string;
-  unit: string;
+  siteId: string; // Ex: SP-SPO-0842 (ID da Torre)
+  siteName: string; // Ex: Torre Morumbi Sul
+  towerType: TowerType;
+  towerHeightMeters: number;
+  operator: string; // Ex: Vivo / Telefônica, American Tower, Claro, TIM
+  coordinates: string; // Ex: -23.6214, -46.6980
   address: string;
+  accessKeyProtocol: string; // Ex: Cadeado segredo 8841 ou chave na portaria
   contactName: string;
   contactPhone: string;
   priority: AcionamentoPriority;
-  type: AcionamentoType;
+  type: SurveyType;
   status: AcionamentoStatus;
   requestedAt: string;
   slaLimit: string;
@@ -48,8 +101,12 @@ export interface Acionamento {
     role: string;
   };
   notes: string[];
+  executors: Executor[];
+  documents: SiteDocument[];
+  checklistItems?: { id: string; title: string; checked: boolean }[];
   checkinTime?: string;
   checkoutTime?: string;
+  displacement?: DisplacementInfo;
 }
 
 export interface AgendaItem {
@@ -59,6 +116,8 @@ export interface AgendaItem {
   time: string;
   date: string;
   client: string;
+  siteId?: string;
+  towerType?: string;
   location: string;
   title: string;
   status: 'Concluído' | 'Em andamento' | 'Confirmado' | 'Pendente';

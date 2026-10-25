@@ -5,15 +5,18 @@ import {
   AppNotification,
   ChatConversation,
   ChatMessage,
+  Executor,
   IntegrationConfig,
   NavSection,
   ReportItem,
   ResponsiblePerson,
+  SiteDocument,
 } from './types';
 import {
   INITIAL_ACIONAMENTOS,
   INITIAL_AGENDA,
   INITIAL_CHATS,
+  INITIAL_EXECUTORS_POOL,
   INITIAL_INTEGRATION_CONFIG,
   INITIAL_NOTIFICATIONS,
   INITIAL_REPORTS,
@@ -33,6 +36,7 @@ import {
 } from './components/ReportsAndOthers';
 import { HtmlExportModal } from './components/HtmlExportModal';
 import { IntegrationModal } from './components/IntegrationModal';
+import { DeslocamentoModal } from './components/DeslocamentoModal';
 
 export default function App() {
   const [theme, setTheme] = useState<'escuro' | 'claro'>(() => {
@@ -49,18 +53,26 @@ export default function App() {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
-  // Core Data States
+  // Core Data States - Telecom Sites, Towers, and Field Teams
   const [acionamentos, setAcionamentos] = useState<Acionamento[]>(INITIAL_ACIONAMENTOS);
   const [agenda, setAgenda] = useState<AgendaItem[]>(INITIAL_AGENDA);
   const [responsibles] = useState<ResponsiblePerson[]>(INITIAL_RESPONSIBLES);
+  const [executors, setExecutors] = useState<Executor[]>(INITIAL_EXECUTORS_POOL);
   const [chats, setChats] = useState<Record<string, ChatConversation>>(INITIAL_CHATS);
   const [activeResponsibleId, setActiveResponsibleId] = useState<string>('resp-fernanda');
   const [chatPrefillDraft, setChatPrefillDraft] = useState<string>('');
   const [reports, setReports] = useState<ReportItem[]>(INITIAL_REPORTS);
   const [notifications, setNotifications] = useState<AppNotification[]>(INITIAL_NOTIFICATIONS);
+
+  // Modals
   const [selectedAgendaItem, setSelectedAgendaItem] = useState<AgendaItem | null>(null);
   const [editingReport, setEditingReport] = useState<ReportItem | null>(null);
   const [htmlModalOpen, setHtmlModalOpen] = useState(false);
+  const [deslocamentoModalOpen, setDeslocamentoModalOpen] = useState(false);
+  const [selectedDeslocamentoSite, setSelectedDeslocamentoSite] = useState<Acionamento | null>(null);
+  const [acionamentosInitialFilter, setAcionamentosInitialFilter] = useState<
+    'todos' | 'restantes' | 'em_deslocamento' | 'em_curso' | 'concluidos'
+  >('todos');
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
   // Integration with Central System (REST / Webhook / postMessage)
@@ -74,34 +86,41 @@ export default function App() {
         const d = event.data.demanda;
         handleAddAcionamento({
           protocol: `AC-2026-00${1060 + acionamentos.length}`,
-          externalId: d.id_externo || 'EXT-SYNC',
+          externalId: d.id_externo || 'SITE-EXT-SYNC',
           externalSystem: integrationConfig.systemName,
           syncedAt: 'Agora (via postMessage)',
-          client: d.cliente || 'Cliente Sincronizado',
-          unit: d.unidade || 'Unidade Principal',
+          siteId: d.site_id || `SP-SPO-${Math.floor(1000 + Math.random() * 9000)}`,
+          siteName: d.site_nome || d.torre || 'Torre Telecom Sincronizada',
+          towerType: d.tipo_torre || 'Autoportante',
+          towerHeightMeters: d.altura_metros || 50,
+          operator: d.operadora || 'American Tower / Vivo',
+          coordinates: d.coordenadas || '-23.5505, -46.6333',
           address: d.endereco || 'São Paulo - SP',
-          contactName: d.contato_nome || 'Recepção',
+          accessKeyProtocol: d.chave_acesso || 'Cadeado segredo 8820',
+          contactName: d.contato_nome || 'NOC Central',
           contactPhone: d.contato_telefone || '(11) 98000-0000',
           priority: d.prioridade || 'Alta',
-          type: d.tipo || 'Emergencial',
+          type: d.tipo_vistoria || 'Vistoria Estrutural',
           status: 'Aguardando aceite',
           requestedAt: 'Hoje · Agora',
           slaLimit: '2h00 (SLA Externo)',
           slaRemainingMinutes: 120,
-          problemDescription: d.descricao || 'Demanda recebida via integração postMessage.',
-          systemEquipment: d.equipamento || 'Infraestrutura Geral',
+          problemDescription: d.descricao || 'Demanda de vistoria recebida via integração postMessage.',
+          systemEquipment: d.equipamento || 'Torre Telecom + Infra de Energia',
           dispatcher: {
             responsibleId: 'resp-fernanda',
             name: 'Fernanda Costa (Despacho Central)',
-            role: 'Coordenação de Operações',
+            role: 'Coordenação de Vistorias e Rotas',
           },
+          executors: [executors[0]],
+          documents: [],
         });
-        showToast(`Demanda ${d.id_externo || ''} recebida do sistema central!`);
+        showToast(`Nova demanda de torre ${d.site_id || ''} recebida do sistema central!`);
       }
     };
     window.addEventListener('message', handleMessage);
     return () => window.removeEventListener('message', handleMessage);
-  }, [acionamentos.length, integrationConfig.systemName]);
+  }, [acionamentos.length, integrationConfig.systemName, executors]);
 
   const handleManualSync = () => {
     const now = new Date();
@@ -117,15 +136,15 @@ export default function App() {
           id: `sync-${Date.now()}`,
           time: timeStr,
           direction: 'outbound',
-          event: 'Sincronização manual executada',
+          event: 'Sincronização manual de vistorias em sites',
           status: 'sucesso',
-          details: `${acionamentos.length} demandas conferidas. Conexão com ${prev.systemName} ativa (200 OK).`,
-          payloadSummary: 'Status sincronizados com sucesso.',
+          details: `${acionamentos.length} sites conferidos. Conexão com ${prev.systemName} ativa (200 OK).`,
+          payloadSummary: 'Status dos sites e vistorias transmitidos com sucesso.',
         },
         ...prev.syncLogs,
       ],
     }));
-    showToast('Sincronização com o sistema central concluída (200 OK)!');
+    showToast('Sincronização de sites com o sistema central concluída (200 OK)!');
   };
 
   const handleSimulateInboundDemand = () => {
@@ -134,7 +153,7 @@ export default function App() {
       now.getMinutes()
     ).padStart(2, '0')}`;
     const nextProtocol = `AC-2026-00${1060 + acionamentos.length}`;
-    const externalTkt = `TKT-2026-${Math.floor(9000 + Math.random() * 999)}`;
+    const externalTkt = `SITE-SP-${Math.floor(9000 + Math.random() * 999)}`;
 
     const newDemand: Acionamento = {
       id: `ac-${Date.now()}`,
@@ -142,27 +161,43 @@ export default function App() {
       externalId: externalTkt,
       externalSystem: integrationConfig.systemName,
       syncedAt: `Hoje · ${timeStr}`,
-      client: 'Rede Drogaria São Paulo',
-      unit: 'Loja 142 · Faria Lima',
-      address: 'Av. Brig. Faria Lima, 2232 - Itaim Bibi, São Paulo - SP',
-      contactName: 'Julio Cezar (Gerente Operacional)',
-      contactPhone: '(11) 98111-2233',
+      siteId: 'SP-SAN-0420',
+      siteName: 'Torre Santos Ponta da Praia (ERB 0420)',
+      towerType: 'Autoportante',
+      towerHeightMeters: 60,
+      operator: 'American Tower / Vivo',
+      coordinates: '-23.9820, -46.3080',
+      address: 'Av. Saldanha da Gama, 140 - Ponta da Praia, Santos - SP',
+      accessKeyProtocol: 'Cadeado Papaiz segredo 9110 (Portão da Marina)',
+      contactName: 'Luciano Prado (Supervisão Regional Litoral)',
+      contactPhone: '(13) 98111-2233',
       priority: 'Crítica',
-      type: 'Emergencial',
+      type: 'Vistoria Estrutural',
       status: 'Aguardando aceite',
       requestedAt: `Hoje · ${timeStr}`,
-      slaLimit: '2h00 (SLA Crítico)',
+      slaLimit: '2h00 (SLA Crítico Vento Forte)',
       slaRemainingMinutes: 120,
-      problemDescription: 'Queda total no switch PoE das câmeras e terminais de caixa PDV. Clientes sem atendimento no balcão.',
-      systemEquipment: 'Switch Cisco SG350-28P + Nobreak APC Smart-UPS 1500VA',
+      problemDescription:
+        'Alerta meteorológico da Defesa Civil (rajadas > 70 km/h). Vistoriar imediatamente esticadores de antenas 5G, integridade da esteira de cabos de RF e malha de aterramento da torre de 60m.',
+      systemEquipment: 'Torre Autoportante 60m + Antenas Painel Kathrein + QGBT 200A',
       dispatcher: {
         responsibleId: 'resp-fernanda',
         name: 'Fernanda Costa',
-        role: 'Coordenadora de Operações',
+        role: 'Coordenadora de Campo & Despacho',
       },
       notes: [
         `${timeStr} - Demanda despachada automaticamente pelo ${integrationConfig.systemName}.`,
-        `${timeStr} - Notificação enviada ao técnico Rafael.`,
+        `${timeStr} - Notificação de emergência enviada ao vistoriador ${USER_PROFILE.shortName}.`,
+      ],
+      executors: [executors[0], executors[1]],
+      documents: [],
+      checklistItems: [
+        { id: 'c1', title: 'Inspeção visual da fundação e chumbadores da base', checked: false },
+        { id: 'c2', title: 'Medição da malha de aterramento (TMGB < 5 ohms)', checked: false },
+        { id: 'c3', title: 'Inspeção do esteiramento vertical e horizontal', checked: false },
+        { id: 'c4', title: 'Aperto e torqueamento dos parafusos nos patamares 30m e 50m', checked: false },
+        { id: 'c5', title: 'Verificação do balizamento noturno e fiação', checked: false },
+        { id: 'c6', title: 'Registro fotográfico 360° para laudo RAT', checked: false },
       ],
     };
 
@@ -176,10 +211,10 @@ export default function App() {
           id: `sync-${Date.now()}`,
           time: `${timeStr}:00`,
           direction: 'inbound',
-          event: 'Nova demanda despachada via API',
+          event: 'Nova demanda de site despachada via API',
           status: 'sucesso',
           details: `Demanda ${externalTkt} recebida de ${prev.systemName}.`,
-          payloadSummary: `${nextProtocol} · Rede Drogaria SP · SLA 2h`,
+          payloadSummary: `${nextProtocol} · Torre Santos 60m · SLA 2h`,
         },
         ...prev.syncLogs,
       ],
@@ -188,8 +223,8 @@ export default function App() {
     setNotifications((prev) => [
       {
         id: `notif-${Date.now()}`,
-        title: `🚨 Demanda urgente: ${externalTkt}`,
-        detail: `Rede Drogaria SP · Despachada pelo ${integrationConfig.systemName}`,
+        title: `🚨 Vistoria urgente na Torre: ${externalTkt}`,
+        detail: `Torre Santos Ponta da Praia 60m · Despachada pelo ${integrationConfig.systemName}`,
         time: 'Agora mesmo',
         read: false,
         actionUrl: NavSection.ACIONAMENTOS,
@@ -197,9 +232,10 @@ export default function App() {
       ...prev,
     ]);
 
-    showToast(`Nova demanda recebida do ${integrationConfig.systemName}!`);
+    showToast(`Nova demanda de torre (${newDemand.siteId}) despachada pelo sistema central!`);
   };
 
+  // Sync theme with html element
   useEffect(() => {
     const root = document.documentElement;
     root.classList.toggle('dark', theme === 'escuro');
@@ -214,17 +250,15 @@ export default function App() {
   const showToast = (msg: string) => {
     setToastMessage(msg);
     setTimeout(() => {
-      setToastMessage((cur) => (cur === msg ? null : cur));
+      setToastMessage((cur: string | null) => (cur === msg ? null : cur));
     }, 2800);
   };
 
   const activeAcionamentosCount = acionamentos.filter((a) => a.status !== 'Concluído').length;
   const unreadChatCount = Object.values(chats).reduce((acc, c) => acc + (c.unread || 0), 0);
-  const racDraftCount = reports.filter((r) => r.type === 'RAC' && r.status === 'Rascunho').length;
-  const ratDraftCount = reports.filter((r) => r.type === 'RAT' && r.status === 'Rascunho').length;
 
   /* ==========================================================================
-     HANDLERS: ACIONAMENTOS
+     HANDLERS: ACIONAMENTOS / SITES
   ========================================================================== */
   const handleUpdateAcionamentoStatus = (
     id: string,
@@ -240,19 +274,41 @@ export default function App() {
         if (item.id !== id) return item;
 
         const updatedNotes = [...item.notes];
+        let updatedDisplacement = item.displacement;
+
         if (status === 'Aceito') {
-          updatedNotes.push(`${timeStr} - Acionamento aceito pelo técnico ${USER_PROFILE.shortName}.`);
+          updatedNotes.push(`${timeStr} - Vistoria no site aceita pelo vistoriador ${USER_PROFILE.shortName}.`);
         } else if (status === 'Em deslocamento') {
-          updatedNotes.push(`${timeStr} - Deslocamento iniciado via app operacional.`);
+          updatedNotes.push(`${timeStr} - Deslocamento iniciado rumo à torre.`);
+          if (!updatedDisplacement) {
+            updatedDisplacement = {
+              origin: 'Base Operacional Berrini (Av. Eng. Luís Carlos Berrini, 105)',
+              destination: item.address,
+              vehicle: 'Fiat Strada Freedom 1.3 · Placa BRA-2E19 · Frota Ameta #04',
+              driver: USER_PROFILE.fullName,
+              departureTime: timeStr,
+              estimatedArrival: `${String(now.getHours()).padStart(2, '0')}:${String(
+                (now.getMinutes() + 25) % 60
+              ).padStart(2, '0')} (~25 min restantes)`,
+              estimatedDistanceKm: 18.4,
+              trafficCondition: 'Trânsito moderado nas vias de acesso',
+              routeSummary: `Via Corredor Norte-Sul → ${item.address.split(',')[0]}`,
+              wazeUrl: `https://waze.com/ul?ll=${encodeURIComponent(item.coordinates)}&navigate=yes`,
+              mapsUrl: `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(item.coordinates)}`,
+            };
+          }
         } else if (status === 'No local') {
-          updatedNotes.push(`${timeStr} - Chegada e check-in no cliente confirmados.`);
+          updatedNotes.push(`${timeStr} - Chegada ao site e check-in GPS confirmados.`);
+        } else if (status === 'Em atendimento') {
+          updatedNotes.push(`${timeStr} - Subida na torre iniciada com check-in e segurança confirmados.`);
         } else if (status === 'Concluído') {
-          updatedNotes.push(`${timeStr} - Atendimento finalizado e testado.`);
+          updatedNotes.push(`${timeStr} - Vistoria concluída. Checklist e laudo fotográfico RAT gerados.`);
         }
 
         return {
           ...item,
           status,
+          displacement: updatedDisplacement,
           notes: updatedNotes,
           checkinTime: status === 'No local' ? timeStr : item.checkinTime,
           checkoutTime: status === 'Concluído' ? timeStr : item.checkoutTime,
@@ -260,7 +316,7 @@ export default function App() {
       })
     );
 
-    showToast(`Acionamento atualizado para "${status}".`);
+    showToast(`Status do site alterado para "${status}".`);
   };
 
   const handleAddAcionamento = (newItem: Omit<Acionamento, 'id' | 'notes'>) => {
@@ -268,44 +324,53 @@ export default function App() {
       ...newItem,
       id: `ac-${Date.now()}`,
       notes: [
-        `Agora - Acionamento ${newItem.protocol} registrado no sistema Ameta.`,
+        `Agora - Demanda de vistoria no site ${newItem.siteId} registrada no sistema Ameta Telecom.`,
+      ],
+      executors: newItem.executors || [executors[0]],
+      documents: newItem.documents || [],
+      checklistItems: newItem.checklistItems || [
+        { id: 'c1', title: 'Inspeção visual da fundação e chumbadores da base', checked: false },
+        { id: 'c2', title: 'Medição da malha de aterramento (TMGB < 5 ohms)', checked: false },
+        { id: 'c3', title: 'Inspeção do esteiramento vertical e horizontal', checked: false },
+        { id: 'c4', title: 'Aperto e torqueamento dos parafusos e tirantes', checked: false },
+        { id: 'c5', title: 'Verificação do balizamento noturno e fiação', checked: false },
+        { id: 'c6', title: 'Registro fotográfico 360° para laudo RAT', checked: false },
       ],
     };
     setAcionamentos((prev) => [created, ...prev]);
 
-    // Also notify
     setNotifications((prev) => [
       {
         id: `notif-${Date.now()}`,
-        title: `Novo acionamento ${created.protocol}`,
-        detail: `${created.client} · Prioridade ${created.priority}`,
-        time: 'Agora',
+        title: `Novo site para vistoria: ${created.siteId}`,
+        detail: `${created.siteName} (${created.towerType}) · ${created.operator}`,
+        time: 'Agora mesmo',
         read: false,
         actionUrl: NavSection.ACIONAMENTOS,
       },
       ...prev,
     ]);
 
-    showToast(`Acionamento ${created.protocol} registrado com sucesso.`);
+    showToast(`Demanda para o site ${created.siteId} criada e despachada!`);
   };
 
   /* ==========================================================================
      HANDLERS: AGENDA
   ========================================================================== */
-  const handleAddAgendaItem = (newItem: Omit<AgendaItem, 'id'>) => {
+  const handleAddAgendaItem = (item: Omit<AgendaItem, 'id'>) => {
     const created: AgendaItem = {
-      ...newItem,
+      ...item,
       id: `ag-${Date.now()}`,
     };
     setAgenda((prev) => [...prev, created]);
-    showToast(`Agendamento ${created.code} incluído na sua agenda.`);
+    showToast(`Agendamento de vistoria ${created.code} incluído na sua agenda.`);
   };
 
   const handleUpdateAgendaStatus = (id: string, status: AgendaItem['status']) => {
     setAgenda((prev) =>
       prev.map((item) => (item.id === id ? { ...item, status } : item))
     );
-    setSelectedAgendaItem((prev) =>
+    setSelectedAgendaItem((prev: AgendaItem | null) =>
       prev && prev.id === id ? { ...prev, status } : prev
     );
     showToast(`Status da agenda alterado para "${status}".`);
@@ -317,18 +382,6 @@ export default function App() {
   const handleStartChatWith = (responsibleId: string, prefillMessage: string = '') => {
     setActiveResponsibleId(responsibleId);
     setChatPrefillDraft(prefillMessage);
-    // Clear unread for this responsible
-    setChats((prev) => {
-      const cur = prev[responsibleId];
-      if (!cur) return prev;
-      return {
-        ...prev,
-        [responsibleId]: {
-          ...cur,
-          unread: 0,
-        },
-      };
-    });
     setActiveSection(NavSection.CHAT_RESPONSAVEIS);
   };
 
@@ -346,7 +399,7 @@ export default function App() {
       id: `msg-${Date.now()}`,
       senderId: 'user-rafael',
       senderName: USER_PROFILE.shortName,
-      role: 'Técnico',
+      role: USER_PROFILE.roleLabel,
       text,
       time: timeStr,
       fromMe: true,
@@ -354,7 +407,7 @@ export default function App() {
     };
 
     setChats((prev) => {
-      const cur = prev[responsibleId] || {
+      const existing = prev[responsibleId] || {
         responsibleId,
         unread: 0,
         lastMessage: '',
@@ -364,42 +417,26 @@ export default function App() {
       return {
         ...prev,
         [responsibleId]: {
-          ...cur,
+          ...existing,
           lastMessage: text,
           lastMessageTime: timeStr,
-          messages: [...cur.messages, newMsg],
+          messages: [...existing.messages, newMsg],
         },
       };
     });
 
-    // Realistic automated reply from the responsible person
+    // Simulated reply from Dispatcher / NOC / Engineer
     setTimeout(() => {
       const resp = responsibles.find((r) => r.id === responsibleId);
-      if (!resp) return;
-
-      const replyTime = `${String(new Date().getHours()).padStart(2, '0')}:${String(
-        new Date().getMinutes()
-      ).padStart(2, '0')}`;
-
-      let replyText = `Ciente, Rafael! Mensagem registrada pelo plantão. Qualquer novidade no local me chame imediatamente.`;
-
-      if (text.includes('chegar no local') || text.includes('Cheguei')) {
-        replyText = `Ótimo, Rafael! Check-in registrado no sistema da Ameta. Lembre-se de coletar o nome do responsável predial antes de iniciar.`;
-      } else if (text.includes('N3') || text.includes('apoio')) {
-        replyText = `Recebido! Já estou abrindo a telemetria do switch e conferindo a potência óptica no Zabbix aqui pelo NOC.`;
-      } else if (text.includes('trânsito')) {
-        replyText = `Sem problemas, já informei o cliente sobre a previsão de 15 minutos. Dirija com calma e em segurança.`;
-      } else if (text.includes('finalizado')) {
-        replyText = `Excelente trabalho! Pode preencher o RAC e RAT para formalizarmos a baixa técnica do chamado.`;
-      }
-
-      const autoMsg: ChatMessage = {
-        id: `msg-resp-${Date.now()}`,
-        senderId: resp.id,
-        senderName: resp.name,
-        role: resp.role,
-        text: replyText,
-        time: replyTime,
+      const replyMsg: ChatMessage = {
+        id: `reply-${Date.now()}`,
+        senderId: responsibleId,
+        senderName: resp?.name || 'Coordenação',
+        role: resp?.role || 'Despacho',
+        text: `Recebido, ${USER_PROFILE.shortName}. Dados do site e protocolo de subida atualizados no NOC. Qualquer divergência de acesso me chame aqui.`,
+        time: `${String(now.getHours()).padStart(2, '0')}:${String(
+          now.getMinutes() + 1
+        ).padStart(2, '0')}`,
         fromMe: false,
         relatedAcionamentoProtocol: relatedAcionamento,
       };
@@ -411,26 +448,39 @@ export default function App() {
           ...prev,
           [responsibleId]: {
             ...cur,
-            lastMessage: replyText,
-            lastMessageTime: replyTime,
-            messages: [...cur.messages, autoMsg],
+            unread: activeResponsibleId === responsibleId ? 0 : cur.unread + 1,
+            lastMessage: replyMsg.text,
+            lastMessageTime: replyMsg.time,
+            messages: [...cur.messages, replyMsg],
           },
         };
       });
-
-      showToast(`Nova resposta de ${resp.name}.`);
-    }, 1300);
+    }, 1200);
   };
 
   /* ==========================================================================
-     HANDLERS: RELATÓRIOS
+     HANDLERS: LAUDOS RAC E RAT
   ========================================================================== */
   const handleContinueReport = (type: 'RAC' | 'RAT') => {
-    const firstDraft = reports.find((r) => r.type === type && r.status === 'Rascunho');
-    if (firstDraft) {
-      setEditingReport(firstDraft);
+    const existing = reports.find((r) => r.type === type && r.status === 'Rascunho');
+    if (existing) {
+      setEditingReport(existing);
     } else {
-      showToast(`Todos os relatórios ${type} estão finalizados.`);
+      setEditingReport({
+        id: `rep-${Date.now()}`,
+        code: `${type}-2026-0842`,
+        type,
+        ticketProtocol: 'AC-2026-001052',
+        client: 'American Tower / Vivo (Torre Morumbi Sul)',
+        title:
+          type === 'RAT'
+            ? 'Relatório Fotográfico de Vistoria de Torre 55m'
+            : 'Relatório de Atendimento de Campo & Subida em Torre',
+        status: 'Rascunho',
+        overdue: false,
+        updatedAt: 'Hoje · Agora',
+        summary: 'Vistoria pós-vendaval realizada. Fundação, aterramento e esteiramento inspecionados.',
+      });
     }
   };
 
@@ -441,19 +491,19 @@ export default function App() {
           ? {
               ...r,
               summary,
-              status: finalize ? 'Enviado' : 'Rascunho',
-              updatedAt: 'Agora mesmo',
+              status: finalize ? ('Enviado' as const) : ('Rascunho' as const),
+              updatedAt: 'Hoje · Agora',
             }
           : r
       )
     );
     setEditingReport(null);
-    showToast(finalize ? 'Relatório concluído e enviado!' : 'Rascunho salvo.');
+    showToast(finalize ? 'Laudo finalizado e transmitido ao NOC!' : 'Rascunho do laudo salvo com sucesso!');
   };
 
   return (
     <div className="flex h-svh min-h-0 w-full overflow-hidden bg-background text-foreground">
-      {/* Sidebar with Acionamentos, Agenda, and Chat com responsáveis */}
+      {/* Sidebar with the strictly requested 4 links */}
       <Sidebar
         activeSection={activeSection}
         onSelectSection={setActiveSection}
@@ -488,30 +538,46 @@ export default function App() {
               acionamentos={acionamentos}
               responsibles={responsibles}
               reports={reports}
+              executors={executors}
               unreadMessagesCount={unreadChatCount}
-              onNavigate={setActiveSection}
+              onNavigate={(section) => {
+                setAcionamentosInitialFilter('todos');
+                setActiveSection(section);
+              }}
               onOpenAcionamentoDetail={(item) => {
+                setAcionamentosInitialFilter('todos');
                 setActiveSection(NavSection.ACIONAMENTOS);
               }}
               onOpenAgendaDetail={(item) => setSelectedAgendaItem(item)}
+              onOpenDeslocamentoModal={(site) => {
+                setSelectedDeslocamentoSite(site || null);
+                setDeslocamentoModalOpen(true);
+              }}
               onStartChatWith={handleStartChatWith}
               onUpdateAcionamentoStatus={handleUpdateAcionamentoStatus}
               onContinueReport={handleContinueReport}
+              onToast={showToast}
             />
           )}
 
           {activeSection === NavSection.ACIONAMENTOS && (
             <AcionamentosView
               acionamentos={acionamentos}
+              initialFilter={acionamentosInitialFilter}
               onUpdateStatus={handleUpdateAcionamentoStatus}
               onAddAcionamento={handleAddAcionamento}
               onOpenChatWithDispatcher={(respId, protocol) =>
                 handleStartChatWith(
                   respId,
-                  `Olá, sobre o acionamento ${protocol}: `
+                  `Olá, sobre o site/torre ${protocol}: `
                 )
               }
+              onOpenDeslocamentoModal={(site) => {
+                setSelectedDeslocamentoSite(site || null);
+                setDeslocamentoModalOpen(true);
+              }}
               onBackHome={() => setActiveSection(NavSection.INICIO)}
+              onToast={showToast}
             />
           )}
 
@@ -546,12 +612,11 @@ export default function App() {
               onBackHome={() => setActiveSection(NavSection.INICIO)}
             />
           )}
-
         </main>
 
         {/* Discreet Footer */}
         <footer className="shrink-0 border-t border-border bg-background px-4 py-3 text-center text-xs text-muted-foreground">
-          © Ameta 2026
+          © Ameta Telecom 2026 · Gestão Integrada de Sites & Vistorias em Campo
         </footer>
 
         {/* Feedback Toast */}
@@ -592,6 +657,35 @@ export default function App() {
         onUpdateConfig={(updates) => setIntegrationConfig((prev) => ({ ...prev, ...updates }))}
         onManualSync={handleManualSync}
         onSimulateInboundDemand={handleSimulateInboundDemand}
+      />
+
+      <DeslocamentoModal
+        open={deslocamentoModalOpen}
+        onClose={() => setDeslocamentoModalOpen(false)}
+        sitesEmDeslocamento={
+          selectedDeslocamentoSite
+            ? [
+                selectedDeslocamentoSite,
+                ...acionamentos.filter(
+                  (a) =>
+                    a.status === 'Em deslocamento' &&
+                    a.id !== selectedDeslocamentoSite.id
+                ),
+              ]
+            : acionamentos.filter((a) => a.status === 'Em deslocamento')
+        }
+        onConfirmArrival={(siteId) => {
+          handleUpdateAcionamentoStatus(siteId, 'No local');
+          showToast(
+            'Chegada ao site confirmada! Check-in GPS registrado com sucesso.'
+          );
+        }}
+        onOpenChatWithDispatcher={handleStartChatWith}
+        onOpenSiteDetail={(site) => {
+          setAcionamentosInitialFilter('todos');
+          setActiveSection(NavSection.ACIONAMENTOS);
+        }}
+        onToast={showToast}
       />
     </div>
   );

@@ -109,12 +109,12 @@ export const Sidebar: React.FC<SidebarProps> = ({
               </button>
             </li>
 
-            {/* 2. Acionamentos */}
+            {/* 2. Vistorias em Sites */}
             <li>
               <button
                 type="button"
                 onClick={() => handleNavigate(NavSection.ACIONAMENTOS)}
-                title={isIconOnly ? 'Acionamentos' : undefined}
+                title={isIconOnly ? 'Vistorias em Sites' : undefined}
                 className={`flex w-full items-center gap-2.5 overflow-hidden rounded-md px-2.5 h-9 text-left text-sm transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring whitespace-nowrap ${
                   isIconOnly ? 'justify-center px-0' : ''
                 } ${
@@ -137,7 +137,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 </div>
                 {!isIconOnly && (
                   <>
-                    <span className="truncate">Acionamentos</span>
+                    <span className="truncate">Vistorias em Sites</span>
                     {activeAcionamentosCount > 0 && (
                       <span className="ml-auto inline-flex items-center px-1.5 py-0.2 rounded text-[11px] font-semibold bg-amber-500/20 text-amber-400 tabular-nums">
                         {activeAcionamentosCount}
