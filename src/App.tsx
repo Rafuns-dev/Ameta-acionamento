@@ -124,12 +124,15 @@ export default function App() {
     }
 
     const emailLower = currentUser.email.trim().toLowerCase();
+    const isCoord = emailLower.includes('coord') || emailLower.includes('admin') || emailLower.includes('gerente') || emailLower.includes('gestao') || emailLower.includes('dono') || emailLower.includes('operacao') || emailLower.includes('telecom') || emailLower.includes('ameta');
     setIsLoadingFirestore(true);
 
-    const q = query(
-      collection(db, 'acionamentos'),
-      where('destinatariosEmails', 'array-contains', emailLower)
-    );
+    const q = isCoord
+      ? query(collection(db, 'acionamentos'))
+      : query(
+          collection(db, 'acionamentos'),
+          where('destinatariosEmails', 'array-contains', emailLower)
+        );
 
     let previousPendingIds = new Set<string>();
 
