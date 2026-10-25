@@ -43,6 +43,8 @@ export const DashboardHome: React.FC<DashboardHomeProps> = ({
   onToast,
 }) => {
   const user = currentUser;
+  const userEmail = (currentUser?.email || '').toLowerCase();
+  const isCoord = userEmail.includes('coord') || userEmail.includes('admin') || userEmail.includes('gerente') || userEmail.includes('gestao') || userEmail.includes('dono') || userEmail.includes('operacao') || userEmail.includes('telecom') || userEmail.includes('ameta');
 
   // Operational real counters calculated directly from user's acionamentos
   const aguardandoCount = acionamentos.filter(
@@ -366,7 +368,7 @@ export const DashboardHome: React.FC<DashboardHomeProps> = ({
 
             {/* Workflow Action Buttons */}
             <div className="flex flex-wrap items-center gap-2 pt-1">
-              {activeSite.status === 'Aguardando aceite' && (
+              {activeSite.status === 'Aguardando aceite' && !isCoord && (
                 <>
                   <button
                     type="button"
@@ -385,6 +387,27 @@ export const DashboardHome: React.FC<DashboardHomeProps> = ({
                     <span>Recusar</span>
                   </button>
                 </>
+              )}
+
+              {isCoord && (
+                <div className="rounded-md border border-amber-500/50 bg-amber-500/10 px-3 py-1.5 flex items-center gap-2">
+                  <span className="text-xs font-bold text-amber-300">⚙️ Coordenador — Alterar Status:</span>
+                  <select
+                    value={activeSite.status}
+                    onChange={(e) => onUpdateAcionamentoStatus(activeSite.id, e.target.value as AcionamentoStatus)}
+                    className="rounded border border-input bg-background px-2 py-1 text-xs font-bold text-foreground cursor-pointer focus:outline-none focus:ring-1 focus:ring-primary"
+                  >
+                    <option value="Aguardando aceite">Aguardando aceite</option>
+                    <option value="Aceito">Aceito</option>
+                    <option value="Recusado">Recusado</option>
+                    <option value="Em deslocamento">Em deslocamento</option>
+                    <option value="No local">No local</option>
+                    <option value="Em atendimento">Em atendimento</option>
+                    <option value="Pausado">Pausado</option>
+                    <option value="Concluído">Concluído</option>
+                    <option value="Cancelado">Cancelado</option>
+                  </select>
+                </div>
               )}
 
               {activeSite.status === 'Aceito' && (

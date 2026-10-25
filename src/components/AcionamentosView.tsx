@@ -79,6 +79,9 @@ export const AcionamentosView: React.FC<AcionamentosViewProps> = ({
 
   const [actionLoading, setActionLoading] = useState(false);
 
+  const userEmail = (currentUser?.email || '').toLowerCase();
+  const isCoord = userEmail.includes('coord') || userEmail.includes('admin') || userEmail.includes('gerente') || userEmail.includes('gestao') || userEmail.includes('dono') || userEmail.includes('operacao') || userEmail.includes('telecom') || userEmail.includes('ameta');
+
   // Count pending items in 'Aguardando aceite'
   const pendingCount = acionamentos.filter((a) => a.status === 'Aguardando aceite').length;
 
@@ -496,7 +499,7 @@ export const AcionamentosView: React.FC<AcionamentosViewProps> = ({
                     ) : null}
 
                     {/* Coordinator Universal Status Selector */}
-                    {((currentUser?.email || '').toLowerCase().includes('coord') || (currentUser?.email || '').toLowerCase().includes('admin') || (currentUser?.email || '').toLowerCase().includes('gerente') || (currentUser?.email || '').toLowerCase().includes('gestao') || (currentUser?.email || '').toLowerCase().includes('dono') || (currentUser?.email || '').toLowerCase().includes('operacao') || (currentUser?.email || '').toLowerCase().includes('telecom') || (currentUser?.email || '').toLowerCase().includes('ameta')) && (
+                    {isCoord && (
                       <div className="rounded-lg border border-amber-500/50 bg-amber-500/10 p-3 flex flex-wrap items-center justify-between gap-2">
                         <span className="text-xs font-bold text-amber-300">
                           ⚙️ Painel do Coordenador — Alterar Status:
@@ -578,8 +581,8 @@ export const AcionamentosView: React.FC<AcionamentosViewProps> = ({
 
                     {/* Operational Actions */}
                     <div className="flex flex-wrap items-center gap-1.5">
-                      {/* Aguardando Aceite: Aceitar & Recusar */}
-                      {isAguardando && (
+                      {/* Aguardando Aceite: Aceitar & Recusar (Only for field techs) */}
+                      {isAguardando && !isCoord && (
                         <>
                           <button
                             type="button"
