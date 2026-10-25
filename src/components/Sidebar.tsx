@@ -4,7 +4,6 @@ import {
   ChevronLeft,
   ChevronRight,
   LayoutDashboard,
-  MessagesSquare,
   Radio,
   X,
 } from 'lucide-react';
@@ -19,7 +18,6 @@ interface SidebarProps {
   mobileOpen: boolean;
   onCloseMobile: () => void;
   activeAcionamentosCount: number;
-  unreadChatCount: number;
 }
 
 export const Sidebar: React.FC<SidebarProps> = ({
@@ -30,7 +28,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
   mobileOpen,
   onCloseMobile,
   activeAcionamentosCount,
-  unreadChatCount,
 }) => {
   const handleNavigate = (section: NavSection) => {
     onSelectSection(section);
@@ -71,7 +68,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
           )}
         </div>
 
-        {/* Navigation Links: Início, Acionamentos, Agenda, Chat interno com responsáveis */}
+        {/* Navigation Links: Início, Acionamentos, Agenda */}
         <div
           data-sidebar="content"
           className="flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto p-2"
@@ -109,12 +106,12 @@ export const Sidebar: React.FC<SidebarProps> = ({
               </button>
             </li>
 
-            {/* 2. Vistorias em Sites */}
+            {/* 2. Acionamentos */}
             <li>
               <button
                 type="button"
                 onClick={() => handleNavigate(NavSection.ACIONAMENTOS)}
-                title={isIconOnly ? 'Vistorias em Sites' : undefined}
+                title={isIconOnly ? 'Acionamentos' : undefined}
                 className={`flex w-full items-center gap-2.5 overflow-hidden rounded-md px-2.5 h-9 text-left text-sm transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring whitespace-nowrap ${
                   isIconOnly ? 'justify-center px-0' : ''
                 } ${
@@ -137,7 +134,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 </div>
                 {!isIconOnly && (
                   <>
-                    <span className="truncate">Vistorias em Sites</span>
+                    <span className="truncate">Acionamentos</span>
                     {activeAcionamentosCount > 0 && (
                       <span className="ml-auto inline-flex items-center px-1.5 py-0.2 rounded text-[11px] font-semibold bg-amber-500/20 text-amber-400 tabular-nums">
                         {activeAcionamentosCount}
@@ -167,46 +164,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                     activeSection === NavSection.AGENDA ? 'text-primary' : ''
                   }`}
                 />
-                {!isIconOnly && <span className="truncate">Agenda</span>}
-              </button>
-            </li>
-
-            {/* 4. Chat interno com responsáveis */}
-            <li>
-              <button
-                type="button"
-                onClick={() => handleNavigate(NavSection.CHAT_RESPONSAVEIS)}
-                title={isIconOnly ? 'Chat interno com responsáveis' : undefined}
-                className={`flex w-full items-center gap-2.5 overflow-hidden rounded-md px-2.5 h-9 text-left text-sm transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring whitespace-nowrap ${
-                  isIconOnly ? 'justify-center px-0' : ''
-                } ${
-                  activeSection === NavSection.CHAT_RESPONSAVEIS
-                    ? 'bg-sidebar-accent font-medium text-sidebar-accent-foreground'
-                    : 'text-sidebar-foreground hover:bg-sidebar-accent/60 hover:text-sidebar-accent-foreground'
-                }`}
-              >
-                <div className="relative shrink-0">
-                  <MessagesSquare
-                    className={`size-4 shrink-0 ${
-                      activeSection === NavSection.CHAT_RESPONSAVEIS
-                        ? 'text-primary'
-                        : ''
-                    }`}
-                  />
-                  {unreadChatCount > 0 && isIconOnly && (
-                    <span className="absolute -top-1 -right-1 size-2 rounded-full bg-primary" />
-                  )}
-                </div>
-                {!isIconOnly && (
-                  <>
-                    <span className="truncate">Chat interno com responsáveis</span>
-                    {unreadChatCount > 0 && (
-                      <span className="ml-auto inline-flex items-center px-1.5 py-0.2 rounded text-[11px] font-semibold bg-primary/20 text-primary tabular-nums">
-                        {unreadChatCount}
-                      </span>
-                    )}
-                  </>
-                )}
+                {!isIconOnly && <span className="truncate">Minhas vistorias do dia</span>}
               </button>
             </li>
           </ul>

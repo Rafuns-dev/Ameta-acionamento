@@ -1,22 +1,19 @@
 import React, { useState } from 'react';
 import {
-  AlertCircle,
   CheckCircle2,
   Clock,
   Compass,
   Copy,
-  ExternalLink,
   HardHat,
   Info,
   Key,
+  Mail,
   MapPin,
-  MessageSquare,
   Navigation,
   Pause,
   Play,
   Radio,
   Search,
-  ShieldCheck,
   UserCheck,
   UserX,
   Users,
@@ -49,7 +46,6 @@ interface AcionamentosViewProps {
       pendencias?: string;
     }
   ) => Promise<void>;
-  onOpenChatWithDispatcher: (responsibleId: string, protocol: string) => void;
   onOpenDeslocamentoModal?: (site?: Acionamento) => void;
   onBackHome: () => void;
   onToast?: (msg: string) => void;
@@ -61,9 +57,6 @@ export const AcionamentosView: React.FC<AcionamentosViewProps> = ({
   currentUser,
   initialFilter = 'todos',
   onUpdateStatusWithPayload,
-  onOpenChatWithDispatcher,
-  onOpenDeslocamentoModal,
-  onBackHome,
   onToast,
   isLoadingFirestore = false,
 }) => {
@@ -71,7 +64,6 @@ export const AcionamentosView: React.FC<AcionamentosViewProps> = ({
     'todos' | 'restantes' | 'em_deslocamento' | 'em_curso' | 'concluidos'
   >(initialFilter);
   const [search, setSearch] = useState('');
-  const [selectedAcionamento, setSelectedAcionamento] = useState<Acionamento | null>(null);
 
   // Custom Modals state (no window.confirm)
   const [recusarItem, setRecusarItem] = useState<Acionamento | null>(null);
@@ -123,12 +115,6 @@ export const AcionamentosView: React.FC<AcionamentosViewProps> = ({
       return a.status === 'Concluído' || a.status === 'Cancelado' || a.status === 'Recusado';
     return true;
   });
-
-  const handleCopy = (text: string, label: string) => {
-    if (!text) return;
-    navigator.clipboard?.writeText(text);
-    onToast?.(`${label} copiado!`);
-  };
 
   // Actions
   const handleConfirmAceitar = async (item: Acionamento) => {
@@ -203,7 +189,7 @@ export const AcionamentosView: React.FC<AcionamentosViewProps> = ({
         resumoConclusao: resumoConclusaoInput.trim(),
         pendencias: pendenciasInput.trim() || 'Nenhuma pendência informada.',
       });
-      onToast?.(`Vistoria no site ${concluirItem.siteId} finalizada e transmitida ao NOC!`);
+      onToast?.(`Vistoria no site ${concluirItem.siteId} finalizada!`);
       setConcluirItem(null);
       setResumoConclusaoInput('');
       setPendenciasInput('');
@@ -226,11 +212,11 @@ export const AcionamentosView: React.FC<AcionamentosViewProps> = ({
             </h1>
             <span className="inline-flex items-center gap-1 rounded bg-emerald-500/15 px-2 py-0.5 text-[11px] font-semibold text-emerald-400 border border-emerald-500/30">
               <span className="size-1.5 rounded-full bg-emerald-400 animate-pulse" />
-              Tempo Real · Firebase Firestore
+              Tempo Real · Firebase
             </span>
           </div>
           <p className="mt-1 text-sm text-muted-foreground">
-            Acompanhamento em tempo real das vistorias demandadas pelo sistema Telecom para{' '}
+            Acompanhamento em tempo real das vistorias demandadas para{' '}
             <strong className="text-foreground">{currentUser?.email || 'seu usuário'}</strong>.
           </p>
         </div>
@@ -445,6 +431,23 @@ export const AcionamentosView: React.FC<AcionamentosViewProps> = ({
                       </div>
                     )}
 
+                    {/* Checklist if present in document */}
+                    {item.checklistItems && item.checklistItems.length > 0 && (
+                      <div className="rounded-lg border border-border bg-sidebar/50 p-3 space-y-1.5 text-xs">
+                        <p className="font-semibold text-foreground">Checklist da Vistoria:</p>
+                        <div className="grid gap-1 sm:grid-cols-2">
+                          {item.checklistItems.map((chk) => (
+                            <div key={chk.id} className="flex items-center gap-2 text-muted-foreground">
+                              <span className={`size-2 rounded-full ${chk.checked ? 'bg-emerald-400' : 'bg-muted-foreground/40'}`} />
+                              <span className={chk.checked ? 'line-through opacity-70' : 'text-foreground'}>
+                                {chk.title}
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
                     {/* Details if Recusado */}
                     {isRecusado && item.motivoRecusa && (
                       <div className="rounded-lg border border-destructive/30 bg-destructive/10 p-2.5 text-xs text-destructive leading-relaxed">
@@ -501,11 +504,24 @@ export const AcionamentosView: React.FC<AcionamentosViewProps> = ({
                     )}
                   </div>
 
-                  {/* Right Column: Status Actions */}
+                  {/* Right Column: Demandado por Contact & Status Actions */}
                   <div className="flex flex-col items-start lg:items-end justify-between gap-3 shrink-0 pt-2 lg:pt-0 border-t lg:border-t-0 border-border">
-                    <div className="text-left lg:text-right text-[11px] text-muted-foreground">
-                      <div>Demandado em: <span className="font-medium text-foreground">{formatDateTime(item.demandadoEm, item.demandadoEm || 'Recentemente')}</span></div>
-                      <div>Por: <span className="font-medium text-foreground">{item.demandadoPorNome || 'Telecom'}</span></div>
+                    <div className="text-left lg:text-right text-[11px] text-muted-foreground space-y-0.5">
+                      <div>
+                        Demandado por: <span className="font-medium text-foreground">{item.demandadoPorNome || 'Sistema Telecom'}</span>
+                        {item.demandadoPorEmail && (
+                          <a
+                            href={`mailto:${item.demandadoPorEmail}`}
+                            className="ml-1.5 text-primary hover:underline inline-flex items-center gap-0.5 font-medium"
+                          >
+                            <Mail className="size-3 inline" />
+                            <span>Enviar e-mail</span>
+                          </a>
+                        )}
+                      </div>
+                      {item.demandadoEm && (
+                        <div>Demandado em: <span className="font-medium text-foreground">{formatDateTime(item.demandadoEm)}</span></div>
+                      )}
                     </div>
 
                     {/* Operational Actions */}
@@ -664,13 +680,13 @@ export const AcionamentosView: React.FC<AcionamentosViewProps> = ({
 
               <div>
                 <label className="block text-xs font-semibold text-foreground mb-1">
-                  Motivo da Recusa (obrigatório para envio ao NOC):
+                  Motivo da Recusa:
                 </label>
                 <textarea
                   rows={3}
                   value={motivoRecusaInput}
                   onChange={(e) => setMotivoRecusaInput(e.target.value)}
-                  placeholder="Ex: Falta de equipamentos adequados, conflito de agenda urgente..."
+                  placeholder="Informe o motivo da recusa..."
                   className="w-full rounded-lg border border-input bg-background p-2.5 text-xs text-foreground placeholder:text-muted-foreground focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
                 />
               </div>
@@ -792,7 +808,7 @@ export const AcionamentosView: React.FC<AcionamentosViewProps> = ({
                   rows={3}
                   value={resumoConclusaoInput}
                   onChange={(e) => setResumoConclusaoInput(e.target.value)}
-                  placeholder="Ex: Vistoria concluída sem anomalias estruturais. Parafusos torqueados e balizamento operando perfeitamente..."
+                  placeholder="Descreva o resumo do atendimento realizado..."
                   className="w-full rounded-lg border border-input bg-background p-2.5 text-xs text-foreground placeholder:text-muted-foreground focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
                 />
               </div>
@@ -805,7 +821,7 @@ export const AcionamentosView: React.FC<AcionamentosViewProps> = ({
                   type="text"
                   value={pendenciasInput}
                   onChange={(e) => setPendenciasInput(e.target.value)}
-                  placeholder="Ex: Necessário retorno com pintura anticorrosiva no patamar de 30m"
+                  placeholder="Pendências registradas..."
                   className="w-full rounded-lg border border-input bg-background p-2.5 text-xs text-foreground placeholder:text-muted-foreground focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
                 />
               </div>

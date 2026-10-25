@@ -1,8 +1,7 @@
 export enum NavSection {
   INICIO = 'inicio',
-  ACIONAMENTOS = 'acionamentos', // Vistorias & Demandas em Sites
+  ACIONAMENTOS = 'acionamentos',
   AGENDA = 'agenda',
-  CHAT_RESPONSAVEIS = 'chat_responsaveis',
 }
 
 export type AcionamentoPriority = 'Crítica' | 'Alta' | 'Média' | 'Normal';
@@ -43,33 +42,6 @@ export interface AcionamentoHistoryItem {
   // Legacy fallback fields for reading old records
   por?: string;
   em?: string;
-}
-
-export interface SiteDocument {
-  id: string;
-  code: string;
-  name: string;
-  category: 'Técnico / Vistoria' | 'Acesso & Autorização' | 'Fotos & Evidências';
-  status: 'Válido' | 'Pendente' | 'Em conferência';
-  uploadedAt?: string;
-  fileSize?: string;
-  fileType?: string;
-  notes?: string;
-}
-
-export interface Executor {
-  id: string;
-  name: string;
-  role:
-    | 'Vistoriador Líder'
-    | 'Vistoriador de Campo'
-    | 'Escalador / Alpinista Industrial'
-    | 'Eletricista de Telecom'
-    | 'Técnico de Infraestrutura';
-  cpfMasked: string;
-  company: string;
-  phone: string;
-  status: 'Liberado' | 'Em campo' | 'Disponível';
 }
 
 export interface DisplacementInfo {
@@ -127,7 +99,7 @@ export interface Acionamento {
   resumoConclusao?: string;
   pendencias?: string;
 
-  // UI Fallbacks
+  // UI optional fields if passed
   externalId?: string;
   externalSystem?: string;
   syncedAt?: string;
@@ -151,73 +123,10 @@ export interface Acionamento {
     role: string;
   };
   notes?: string[];
-  executors?: Executor[];
-  documents?: SiteDocument[];
   checklistItems?: { id: string; title: string; checked: boolean }[];
   checkinTime?: string;
   checkoutTime?: string;
   displacement?: DisplacementInfo;
-}
-
-export interface AgendaItem {
-  id: string;
-  code: string;
-  externalId?: string;
-  time: string;
-  date: string;
-  client: string;
-  siteId?: string;
-  towerType?: string;
-  location: string;
-  title: string;
-  status: 'Concluído' | 'Em andamento' | 'Confirmado' | 'Pendente';
-  acionamentoRef?: string;
-  responsible: string;
-  notes: string;
-}
-
-export interface ResponsiblePerson {
-  id: string;
-  name: string;
-  role: string;
-  department: string;
-  status: 'online' | 'ausente' | 'em_atendimento' | 'offline';
-  phone: string;
-  email: string;
-  shift: string;
-  badge: string;
-}
-
-export interface ChatMessage {
-  id: string;
-  senderId: string;
-  senderName: string;
-  role: string;
-  text: string;
-  time: string;
-  fromMe: boolean;
-  relatedAcionamentoProtocol?: string;
-}
-
-export interface ChatConversation {
-  responsibleId: string;
-  unread: number;
-  lastMessage: string;
-  lastMessageTime: string;
-  messages: ChatMessage[];
-}
-
-export interface ReportItem {
-  id: string;
-  code: string;
-  type: 'RAC' | 'RAT';
-  ticketProtocol: string;
-  client: string;
-  title: string;
-  status: 'Rascunho' | 'Ajuste solicitado' | 'Enviado';
-  overdue: boolean;
-  updatedAt: string;
-  summary: string;
 }
 
 export interface AppNotification {
@@ -229,43 +138,19 @@ export interface AppNotification {
   actionUrl?: NavSection;
 }
 
-export interface SyncLogEntry {
-  id: string;
-  time: string;
-  direction: 'inbound' | 'outbound';
-  event: string;
-  status: 'sucesso' | 'pendente' | 'erro';
-  details: string;
-  payloadSummary?: string;
-}
-
-export interface IntegrationConfig {
-  systemName: string;
-  apiUrl: string;
-  apiKey: string;
-  webhookCallbackUrl: string;
-  autoSync: boolean;
-  enablePostMessage: boolean;
-  isConnected: boolean;
-  lastSyncTime: string;
-  syncLogs: SyncLogEntry[];
-}
-
 export interface AuthUser {
   id: string;
   email: string;
-  password?: string;
   shortName: string;
   fullName: string;
-  roleBadge: string;
-  roleLabel: string;
-  company: string;
-  companyFull: string;
-  registration: string;
-  base: string;
-  initials: string;
-  avatarColor: string;
+  roleBadge?: string;
+  roleLabel?: string;
+  company?: string;
+  companyFull?: string;
+  registration?: string;
+  base?: string;
+  initials?: string;
+  avatarColor?: string;
   specialties?: string[];
   phone?: string;
 }
-

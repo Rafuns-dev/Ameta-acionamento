@@ -6,40 +6,16 @@ import { updateAcionamentoStatusInFirestore } from './lib/acionamentosService';
 import {
   Acionamento,
   AcionamentoStatus,
-  AgendaItem,
   AppNotification,
   AuthUser,
-  ChatConversation,
-  ChatMessage,
-  Executor,
-  IntegrationConfig,
   NavSection,
-  ReportItem,
-  ResponsiblePerson,
 } from './types';
-import {
-  INITIAL_AGENDA,
-  INITIAL_CHATS,
-  INITIAL_EXECUTORS_POOL,
-  INITIAL_INTEGRATION_CONFIG,
-  INITIAL_NOTIFICATIONS,
-  INITIAL_REPORTS,
-  INITIAL_RESPONSIBLES,
-  SYSTEM_ACCOUNTS,
-  USER_PROFILE,
-} from './data/initialData';
+import { formatDateTime, toDate } from './utils/dateUtils';
 import { Sidebar } from './components/Sidebar';
 import { Header } from './components/Header';
 import { DashboardHome } from './components/DashboardHome';
 import { AcionamentosView } from './components/AcionamentosView';
 import { AgendaView } from './components/AgendaView';
-import { ChatResponsaveisView } from './components/ChatResponsaveisView';
-import {
-  AgendaDetailModal,
-  ReportEditorModal,
-} from './components/ReportsAndOthers';
-import { HtmlExportModal } from './components/HtmlExportModal';
-import { IntegrationModal } from './components/IntegrationModal';
 import { DeslocamentoModal } from './components/DeslocamentoModal';
 import { LoginView } from './components/LoginView';
 
@@ -66,32 +42,16 @@ export default function App() {
   const [acionamentos, setAcionamentos] = useState<Acionamento[]>([]);
   const [isLoadingFirestore, setIsLoadingFirestore] = useState(false);
 
-  // Other App Data States
-  const [agenda, setAgenda] = useState<AgendaItem[]>(INITIAL_AGENDA);
-  const [responsibles] = useState<ResponsiblePerson[]>(INITIAL_RESPONSIBLES);
-  const [executors] = useState<Executor[]>(INITIAL_EXECUTORS_POOL);
-  const [chats, setChats] = useState<Record<string, ChatConversation>>(INITIAL_CHATS);
-  const [activeResponsibleId, setActiveResponsibleId] = useState<string>('resp-fernanda');
-  const [chatPrefillDraft] = useState<string>('');
-  const [reports, setReports] = useState<ReportItem[]>(INITIAL_REPORTS);
-  const [notifications, setNotifications] = useState<AppNotification[]>(INITIAL_NOTIFICATIONS);
+  // Notifications (Real session notifications only)
+  const [notifications, setNotifications] = useState<AppNotification[]>([]);
 
   // Modals
-  const [selectedAgendaItem, setSelectedAgendaItem] = useState<AgendaItem | null>(null);
-  const [editingReport, setEditingReport] = useState<ReportItem | null>(null);
-  const [htmlModalOpen, setHtmlModalOpen] = useState(false);
   const [deslocamentoModalOpen, setDeslocamentoModalOpen] = useState(false);
   const [selectedDeslocamentoSite, setSelectedDeslocamentoSite] = useState<Acionamento | null>(null);
   const [acionamentosInitialFilter, setAcionamentosInitialFilter] = useState<
     'todos' | 'restantes' | 'em_deslocamento' | 'em_curso' | 'concluidos'
   >('todos');
   const [toastMessage, setToastMessage] = useState<string | null>(null);
-
-  // Integration Modal
-  const [integrationConfig, setIntegrationConfig] = useState<IntegrationConfig>(INITIAL_INTEGRATION_CONFIG);
-  const [integrationModalOpen, setIntegrationModalOpen] = useState(false);
-
-  const activeUser = currentUser || USER_PROFILE;
 
   const showToast = (msg: string) => {
     setToastMessage(msg);
@@ -116,32 +76,30 @@ export default function App() {
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (fbUser) => {
       if (fbUser && fbUser.email) {
-        const emailLower = fbUser.email.toLowerCase();
-        const known = SYSTEM_ACCOUNTS.find(
-          (acc) => acc.email.toLowerCase() === emailLower
-        );
+        const email = fbUser.email.toLowerCase();
+        const emailPrefix = email.split('@')[0];
+        const formattedName = emailPrefix
+          .split(/[._-]/)
+          .map((part) => part.charAt(0).toUpperCase() + part.slice(1).toLowerCase())
+          .join(' ');
 
-        if (known) {
-          setCurrentUser(known);
-        } else {
-          const namePart = fbUser.displayName || fbUser.email.split('@')[0];
-          const dynamicUser: AuthUser = {
-            id: fbUser.uid,
-            email: fbUser.email,
-            shortName: namePart,
-            fullName: fbUser.displayName || namePart,
-            roleBadge: 'TÉCNICO',
-            roleLabel: 'Técnico de Vistoria de Telecom',
-            company: 'Ameta',
-            companyFull: 'Ameta Telecomunicações & Infraestrutura',
-            registration: `TEC-${fbUser.uid.slice(0, 4).toUpperCase()}`,
-            base: 'Base Operacional Telecom',
-            initials: namePart.slice(0, 2).toUpperCase(),
-            avatarColor: 'bg-emerald-600',
-            phone: fbUser.phoneNumber || '',
-          };
-          setCurrentUser(dynamicUser);
-        }
+        const fullName = fbUser.displayName || formattedName;
+        const shortName = fullName.split(' ')[0] || formattedName;
+        const initialsParts = fullName.split(' ');
+        const initials = (
+          (initialsParts[0]?.charAt(0) || '') +
+          (initialsParts[1]?.charAt(0) || '')
+        ).toUpperCase() || 'AM';
+
+        const userFromAuth: AuthUser = {
+          id: fbUser.uid,
+          email: fbUser.email,
+          shortName,
+          fullName,
+          initials,
+          avatarColor: 'bg-emerald-600',
+        };
+        setCurrentUser(userFromAuth);
       } else {
         setCurrentUser(null);
       }
@@ -151,7 +109,7 @@ export default function App() {
     return () => unsubscribe();
   }, []);
 
-  // Listen to Firestore real-time collection "acionamentos" for the logged in user
+  // Listen to Firestore real-time collection "acionamentos" for logged-in user
   useEffect(() => {
     if (!currentUser?.email) {
       setAcionamentos([]);
@@ -177,32 +135,32 @@ export default function App() {
           const docId = docSnap.id;
           const status = (data.status || 'Aguardando aceite') as AcionamentoStatus;
 
-          const siteId = data.siteId || 'SITE-TELECOM';
-          const siteNome = data.siteNome || data.siteName || `Site ${siteId}`;
+          const siteId = data.siteId || docId;
+          const siteNome = data.siteNome || data.siteName || '';
           const protocolo = data.protocolo || data.protocol || docId;
-          const endereco = data.endereco || data.address || 'Endereço não informado';
+          const endereco = data.endereco || data.address || '';
 
           return {
             id: docId,
             protocolo,
             protocol: protocolo,
-            origem: data.origem || 'telecom',
-            vendor: data.vendor || 'NOKIA',
+            origem: data.origem,
+            vendor: data.vendor,
             siteId,
             siteNome,
             siteName: siteNome,
             endereco,
             address: endereco,
-            cidade: data.cidade || '',
-            uf: data.uf || '',
-            tipoDestinatario: data.tipoDestinatario || 'Vistoriador',
-            equipe: data.equipe || '',
+            cidade: data.cidade,
+            uf: data.uf,
+            tipoDestinatario: data.tipoDestinatario,
+            equipe: data.equipe,
             destinatariosEmails: data.destinatariosEmails || [],
             status,
-            demandadoPorNome: data.demandadoPorNome || 'Sistema Telecom',
-            demandadoPorEmail: data.demandadoPorEmail || '',
-            demandadoEm: data.demandadoEm || 'Hoje',
-            observacao: data.observacao || data.problemDescription || '',
+            demandadoPorNome: data.demandadoPorNome,
+            demandadoPorEmail: data.demandadoPorEmail,
+            demandadoEm: data.demandadoEm,
+            observacao: data.observacao,
             aceitoPorEmail: data.aceitoPorEmail,
             aceitoPorNome: data.aceitoPorNome,
             aceitoEm: data.aceitoEm,
@@ -221,61 +179,66 @@ export default function App() {
             resumoConclusao: data.resumoConclusao,
             pendencias: data.pendencias,
 
-            // UI compatibility fallbacks
-            towerType: data.towerType || 'Autoportante',
-            towerHeightMeters: data.towerHeightMeters || 50,
-            operator: data.operator || data.vendor || 'Telecom',
-            coordinates: data.coordinates || '-23.5505, -46.6333',
-            accessKeyProtocol: data.accessKeyProtocol || 'Cadeado segredo 8820',
-            contactName: data.demandadoPorNome || 'Central NOC',
-            contactPhone: '(11) 98000-1122',
-            priority: data.priority || 'Alta',
-            type: data.type || 'Vistoria Estrutural',
-            requestedAt: data.demandadoEm || 'Hoje',
-            slaLimit: '2h00 (SLA Padrão)',
-            slaRemainingMinutes: 120,
-            problemDescription: data.observacao || 'Vistoria em site demandada pelo Telecom',
-            systemEquipment: data.systemEquipment || `Equipamentos do Site ${siteId}`,
-            dispatcher: {
-              responsibleId: 'resp-fernanda',
-              name: data.demandadoPorNome || 'Despacho Telecom',
-              role: 'Coordenadora de Campo',
-            },
-            notes: data.notes || [],
-            executors: data.executors || [],
-            documents: data.documents || [],
-            checklistItems: data.checklistItems || [
-              { id: 'c1', title: 'Inspeção visual da fundação e chumbadores da base', checked: false },
-              { id: 'c2', title: 'Medição da malha de aterramento (TMGB < 5 ohms)', checked: false },
-              { id: 'c3', title: 'Inspeção do esteiramento vertical e horizontal', checked: false },
-              { id: 'c4', title: 'Aperto e torqueamento dos parafusos e tirantes', checked: false },
-            ],
+            // Optional fields if present
+            towerType: data.towerType,
+            towerHeightMeters: data.towerHeightMeters,
+            operator: data.operator,
+            coordinates: data.coordinates,
+            accessKeyProtocol: data.accessKeyProtocol,
+            contactName: data.contactName,
+            contactPhone: data.contactPhone,
+            priority: data.priority,
+            type: data.type,
+            requestedAt: data.requestedAt,
+            slaLimit: data.slaLimit,
+            slaRemainingMinutes: data.slaRemainingMinutes,
+            problemDescription: data.problemDescription,
+            systemEquipment: data.systemEquipment,
+            dispatcher: data.dispatcher,
+            notes: data.notes,
+            checklistItems: data.checklistItems,
+            displacement: data.displacement,
           };
         });
 
-        // Order by demandadoEm or atualizadoEm descending
+        // Order by demandadoEm (or atualizadoEm fallback) descending using toDate()
         loaded.sort((a, b) => {
-          const dateA = a.demandadoEm || a.atualizadoEm || '';
-          const dateB = b.demandadoEm || b.atualizadoEm || '';
-          return dateB.localeCompare(dateA);
+          const dateA = toDate(a.demandadoEm || a.atualizadoEm)?.getTime() || 0;
+          const dateB = toDate(b.demandadoEm || b.atualizadoEm)?.getTime() || 0;
+          return dateB - dateA;
         });
 
-        // Alert user if new pending items in 'Aguardando aceite' arrive
+        // Alert user if new pending items in 'Aguardando aceite' arrive and create real notification
         const currentPending = loaded.filter((item) => item.status === 'Aguardando aceite');
         const currentPendingIds = new Set(currentPending.map((item) => item.id));
 
         const newlyAdded = currentPending.filter((item) => !previousPendingIds.has(item.id));
         if (newlyAdded.length > 0 && previousPendingIds.size > 0) {
-          showToast(`NOVA VISTORIA DEMANDADA! Protocolo ${newlyAdded[0].protocolo} no Site ${newlyAdded[0].siteId}`);
+          const item = newlyAdded[0];
+          showToast(`NOVA VISTORIA DEMANDADA! Protocolo ${item.protocolo} no Site ${item.siteId}`);
+          const newNotif: AppNotification = {
+            id: `notif-${Date.now()}-${item.id}`,
+            title: 'Nova Vistoria Demandada',
+            detail: `Protocolo ${item.protocolo} no Site ${item.siteId}`,
+            time: formatDateTime(new Date()),
+            read: false,
+            actionUrl: NavSection.ACIONAMENTOS,
+          };
+          setNotifications((prev) => [newNotif, ...prev]);
         }
 
         previousPendingIds = currentPendingIds;
         setAcionamentos(loaded);
         setIsLoadingFirestore(false);
       },
-      (err) => {
+      (err: any) => {
         console.error('Firestore subscription error:', err);
         setIsLoadingFirestore(false);
+        if (err?.code === 'permission-denied') {
+          showToast('Sem permissão para ler os acionamentos');
+        } else {
+          showToast('Não foi possível carregar suas vistorias. Fale com a coordenação.');
+        }
       }
     );
 
@@ -292,7 +255,7 @@ export default function App() {
     showToast('Sessão encerrada com sucesso.');
   };
 
-  // Update status in Firestore strictly obeying Requirement 6
+  // Update status in Firestore
   const handleUpdateStatusWithPayload = async (
     docId: string,
     newStatus: AcionamentoStatus,
@@ -319,114 +282,6 @@ export default function App() {
       existingHistorico: targetItem.historico || [],
       ...extraFields,
     });
-  };
-
-  const handleStartChatWith = (responsibleId: string, prefillMessage?: string) => {
-    setActiveResponsibleId(responsibleId);
-    setActiveSection(NavSection.CHAT_RESPONSAVEIS);
-    setChats((prev) => {
-      const cur = prev[responsibleId];
-      if (!cur) return prev;
-      return { ...prev, [responsibleId]: { ...cur, unread: 0 } };
-    });
-  };
-
-  const handleSendMessage = (
-    responsibleId: string,
-    text: string,
-    relatedAcionamento?: string
-  ) => {
-    const now = new Date();
-    const timeStr = `${String(now.getHours()).padStart(2, '0')}:${String(
-      now.getMinutes()
-    ).padStart(2, '0')}`;
-
-    const newMsg: ChatMessage = {
-      id: `msg-${Date.now()}`,
-      senderId: activeUser.id,
-      senderName: activeUser.shortName,
-      role: activeUser.roleLabel,
-      text,
-      time: timeStr,
-      fromMe: true,
-      relatedAcionamentoProtocol: relatedAcionamento,
-    };
-
-    setChats((prev) => {
-      const existing = prev[responsibleId] || {
-        responsibleId,
-        unread: 0,
-        lastMessage: '',
-        lastMessageTime: '',
-        messages: [],
-      };
-      return {
-        ...prev,
-        [responsibleId]: {
-          ...existing,
-          lastMessage: text,
-          lastMessageTime: timeStr,
-          messages: [...existing.messages, newMsg],
-        },
-      };
-    });
-
-    setTimeout(() => {
-      const resp = responsibles.find((r) => r.id === responsibleId);
-      const replyMsg: ChatMessage = {
-        id: `reply-${Date.now()}`,
-        senderId: responsibleId,
-        senderName: resp?.name || 'Coordenação',
-        role: resp?.role || 'Despacho',
-        text: `Recebido, ${activeUser.shortName}. Dados do site e protocolo de subida atualizados no NOC. Qualquer divergência de acesso me chame aqui.`,
-        time: `${String(now.getHours()).padStart(2, '0')}:${String(
-          now.getMinutes() + 1
-        ).padStart(2, '0')}`,
-        fromMe: false,
-        relatedAcionamentoProtocol: relatedAcionamento,
-      };
-
-      setChats((prev) => {
-        const cur = prev[responsibleId];
-        if (!cur) return prev;
-        return {
-          ...prev,
-          [responsibleId]: {
-            ...cur,
-            lastMessage: replyMsg.text,
-            lastMessageTime: replyMsg.time,
-            messages: [...cur.messages, replyMsg],
-          },
-        };
-      });
-    }, 1200);
-  };
-
-  const handleUpdateAgendaStatus = (
-    id: string,
-    newStatus: 'Concluído' | 'Em andamento' | 'Confirmado' | 'Pendente'
-  ) => {
-    setAgenda((prev) =>
-      prev.map((item) => (item.id === id ? { ...item, status: newStatus } : item))
-    );
-    showToast(`Status do agendamento atualizado para "${newStatus}".`);
-  };
-
-  const handleSaveReport = (id: string, summary: string, finalize: boolean) => {
-    setReports((prev) =>
-      prev.map((r) =>
-        r.id === id
-          ? {
-              ...r,
-              summary: summary || 'Laudo de vistoria em campo preenchido.',
-              status: finalize ? ('Enviado' as const) : ('Rascunho' as const),
-              updatedAt: 'Hoje · Agora',
-            }
-          : r
-      )
-    );
-    setEditingReport(null);
-    showToast(finalize ? 'Laudo finalizado e transmitido ao NOC!' : 'Rascunho do laudo salvo com sucesso!');
   };
 
   if (authChecking) {
@@ -467,11 +322,6 @@ export default function App() {
     (a) => a.status !== 'Concluído' && a.status !== 'Cancelado' && a.status !== 'Recusado'
   ).length;
 
-  const unreadChatCount = Object.values(chats).reduce(
-    (acc, curr) => acc + (curr.unread || 0),
-    0
-  );
-
   return (
     <div className="flex h-svh min-h-0 w-full overflow-hidden bg-background text-foreground">
       <Sidebar
@@ -482,7 +332,6 @@ export default function App() {
         mobileOpen={mobileMenuOpen}
         onCloseMobile={() => setMobileMenuOpen(false)}
         activeAcionamentosCount={activeAcionamentosCount}
-        unreadChatCount={unreadChatCount}
       />
 
       {/* Main Area */}
@@ -498,8 +347,6 @@ export default function App() {
           onMarkAllNotificationsRead={() =>
             setNotifications((prev) => prev.map((n) => ({ ...n, read: true })))
           }
-          onOpenHtmlModal={() => setHtmlModalOpen(true)}
-          onOpenIntegrationModal={() => setIntegrationModalOpen(true)}
           onNavigate={setActiveSection}
         />
 
@@ -507,30 +354,18 @@ export default function App() {
           {activeSection === NavSection.INICIO && (
             <DashboardHome
               currentUser={currentUser}
-              agenda={agenda}
               acionamentos={acionamentos}
-              responsibles={responsibles}
-              reports={reports}
-              executors={executors}
-              unreadMessagesCount={unreadChatCount}
               onNavigate={(section) => {
                 setAcionamentosInitialFilter('todos');
                 setActiveSection(section);
               }}
-              onOpenAcionamentoDetail={() => {
-                setAcionamentosInitialFilter('todos');
-                setActiveSection(NavSection.ACIONAMENTOS);
-              }}
-              onOpenAgendaDetail={(item) => setSelectedAgendaItem(item)}
               onOpenDeslocamentoModal={(site) => {
                 setSelectedDeslocamentoSite(site || null);
                 setDeslocamentoModalOpen(true);
               }}
-              onStartChatWith={handleStartChatWith}
               onUpdateAcionamentoStatus={async (id, status) => {
                 await handleUpdateStatusWithPayload(id, status);
               }}
-              onContinueReport={() => setActiveSection(NavSection.INICIO)}
               onToast={showToast}
             />
           )}
@@ -541,12 +376,6 @@ export default function App() {
               currentUser={currentUser}
               initialFilter={acionamentosInitialFilter}
               onUpdateStatusWithPayload={handleUpdateStatusWithPayload}
-              onOpenChatWithDispatcher={(respId, protocol) =>
-                handleStartChatWith(
-                  respId,
-                  `Olá, sobre a vistoria ${protocol}: `
-                )
-              }
               onOpenDeslocamentoModal={(site) => {
                 setSelectedDeslocamentoSite(site || null);
                 setDeslocamentoModalOpen(true);
@@ -559,38 +388,19 @@ export default function App() {
 
           {activeSection === NavSection.AGENDA && (
             <AgendaView
-              agenda={agenda}
-              onOpenDetail={(item) => setSelectedAgendaItem(item)}
-              onAddAgendaItem={(item) => setAgenda((prev) => [{ ...item, id: `agenda-${Date.now()}` }, ...prev])}
-              onUpdateStatus={handleUpdateAgendaStatus}
-              onNavigateToAcionamento={() => {
+              acionamentos={acionamentos}
+              onUpdateStatusWithPayload={handleUpdateStatusWithPayload}
+              onNavigateToAcionamentoDetail={() => {
+                setAcionamentosInitialFilter('todos');
                 setActiveSection(NavSection.ACIONAMENTOS);
               }}
               onBackHome={() => setActiveSection(NavSection.INICIO)}
-            />
-          )}
-
-          {activeSection === NavSection.CHAT_RESPONSAVEIS && (
-            <ChatResponsaveisView
-              responsibles={responsibles}
-              chats={chats}
-              activeResponsibleId={activeResponsibleId}
-              onSelectResponsible={(id) => {
-                setActiveResponsibleId(id);
-                setChats((prev) => {
-                  const cur = prev[id];
-                  if (!cur) return prev;
-                  return { ...prev, [id]: { ...cur, unread: 0 } };
-                });
-              }}
-              onSendMessage={handleSendMessage}
-              prefillDraft={chatPrefillDraft}
-              onBackHome={() => setActiveSection(NavSection.INICIO)}
+              onToast={showToast}
             />
           )}
         </main>
 
-        {/* Discreet Footer */}
+        {/* Footer */}
         <footer className="shrink-0 border-t border-border bg-background px-4 py-3 text-center text-xs text-muted-foreground">
           © Ameta Telecom 2026 · Gestão Integrada de Sites & Vistorias em Campo · Conectado ao Firebase (ameta-sistema-teste)
         </footer>
@@ -608,33 +418,6 @@ export default function App() {
       </div>
 
       {/* Modals */}
-      <AgendaDetailModal
-        item={selectedAgendaItem}
-        onClose={() => setSelectedAgendaItem(null)}
-        onUpdateStatus={handleUpdateAgendaStatus}
-        onOpenAcionamento={() => setActiveSection(NavSection.ACIONAMENTOS)}
-      />
-
-      <ReportEditorModal
-        report={editingReport}
-        onClose={() => setEditingReport(null)}
-        onSaveReport={handleSaveReport}
-      />
-
-      <HtmlExportModal
-        open={htmlModalOpen}
-        onClose={() => setHtmlModalOpen(false)}
-      />
-
-      <IntegrationModal
-        open={integrationModalOpen}
-        onClose={() => setIntegrationModalOpen(false)}
-        config={integrationConfig}
-        onUpdateConfig={(updates) => setIntegrationConfig((prev) => ({ ...prev, ...updates }))}
-        onManualSync={() => showToast('Sincronização com Firebase Firestore é automática e em tempo real!')}
-        onSimulateInboundDemand={() => showToast('As vistorias são enviadas em tempo real pelo sistema Telecom.')}
-      />
-
       <DeslocamentoModal
         open={deslocamentoModalOpen}
         onClose={() => setDeslocamentoModalOpen(false)}
@@ -656,7 +439,6 @@ export default function App() {
             'Chegada ao site confirmada! Check-in registrado com sucesso.'
           );
         }}
-        onOpenChatWithDispatcher={handleStartChatWith}
         onOpenSiteDetail={() => {
           setAcionamentosInitialFilter('todos');
           setActiveSection(NavSection.ACIONAMENTOS);

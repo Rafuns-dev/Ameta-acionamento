@@ -1,10 +1,9 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Bell, CheckCheck, Code2, Globe, LogOut, Menu, Moon, Sun, UserCheck } from 'lucide-react';
+import { Bell, CheckCheck, LogOut, Menu, Moon, Sun, UserCheck } from 'lucide-react';
 import { AppNotification, AuthUser, NavSection } from '../types';
-import { USER_PROFILE } from '../data/initialData';
 
 interface HeaderProps {
-  currentUser?: AuthUser;
+  currentUser: AuthUser;
   onLogout: () => void;
   activeSection: NavSection;
   theme: 'escuro' | 'claro';
@@ -12,16 +11,13 @@ interface HeaderProps {
   onOpenMobileMenu: () => void;
   notifications: AppNotification[];
   onMarkAllNotificationsRead: () => void;
-  onOpenHtmlModal: () => void;
-  onOpenIntegrationModal: () => void;
   onNavigate: (section: NavSection) => void;
 }
 
 const SECTION_TITLES: Record<NavSection, string> = {
   [NavSection.INICIO]: 'Início',
   [NavSection.ACIONAMENTOS]: 'Vistorias em Sites & Torres',
-  [NavSection.AGENDA]: 'Agenda de Vistorias em Campo',
-  [NavSection.CHAT_RESPONSAVEIS]: 'Chat interno com responsáveis',
+  [NavSection.AGENDA]: 'Minhas vistorias do dia',
 };
 
 export const Header: React.FC<HeaderProps> = ({
@@ -33,8 +29,6 @@ export const Header: React.FC<HeaderProps> = ({
   onOpenMobileMenu,
   notifications,
   onMarkAllNotificationsRead,
-  onOpenHtmlModal,
-  onOpenIntegrationModal,
   onNavigate,
 }) => {
   const [notifOpen, setNotifOpen] = useState(false);
@@ -42,7 +36,7 @@ export const Header: React.FC<HeaderProps> = ({
   const notifRef = useRef<HTMLDivElement>(null);
   const profileRef = useRef<HTMLDivElement>(null);
 
-  const user = currentUser || USER_PROFILE;
+  const user = currentUser;
   const unreadNotifications = notifications.filter((n) => !n.read).length;
 
   useEffect(() => {
@@ -70,7 +64,7 @@ export const Header: React.FC<HeaderProps> = ({
         <Menu className="size-5" />
       </button>
 
-      {/* Page Title & Authenticated Subtitle */}
+      {/* Page Title & Subtitle */}
       <div className="min-w-0 flex-1">
         <p className="truncate text-sm font-semibold text-foreground">
           {SECTION_TITLES[activeSection]}
@@ -80,21 +74,10 @@ export const Header: React.FC<HeaderProps> = ({
           <span className="hidden sm:inline">·</span>
           <span className="hidden sm:inline-flex items-center gap-1 text-emerald-400">
             <span className="size-1.5 rounded-full bg-emerald-400"></span>
-            Disponível em campo
+            Conectado
           </span>
         </div>
       </div>
-
-      {/* Standalone Single-File HTML Export Trigger */}
-      <button
-        type="button"
-        onClick={onOpenHtmlModal}
-        title="Ver ou baixar código HTML único com Tailwind CDN"
-        className="hidden md:inline-flex h-8 items-center gap-1.5 rounded-md border border-input bg-background px-2.5 text-xs font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring whitespace-nowrap shrink-0 cursor-pointer"
-      >
-        <Code2 className="size-3.5 text-primary" />
-        <span>HTML Único</span>
-      </button>
 
       {/* Theme Toggle */}
       <button
@@ -132,41 +115,49 @@ export const Header: React.FC<HeaderProps> = ({
           <div className="absolute right-0 mt-2 w-80 max-w-[90vw] rounded-md border border-border bg-sidebar p-3 shadow-xl z-50">
             <div className="flex items-center justify-between border-b border-border pb-2">
               <span className="text-xs font-semibold text-foreground">
-                Notificações de Campo
+                Notificações da Sessão
               </span>
-              <button
-                type="button"
-                onClick={onMarkAllNotificationsRead}
-                className="inline-flex items-center gap-1 text-[11px] text-primary hover:underline cursor-pointer whitespace-nowrap"
-              >
-                <CheckCheck className="size-3.5" />
-                <span>Marcar como lidas</span>
-              </button>
-            </div>
-            <ul className="mt-2 divide-y divide-border max-h-64 overflow-y-auto">
-              {notifications.map((item) => (
-                <li
-                  key={item.id}
-                  onClick={() => {
-                    if (item.actionUrl) onNavigate(item.actionUrl);
-                    setNotifOpen(false);
-                  }}
-                  className={`py-2.5 text-xs cursor-pointer hover:bg-accent/40 rounded px-1 transition-colors ${
-                    !item.read ? 'bg-primary/5' : ''
-                  }`}
+              {unreadNotifications > 0 && (
+                <button
+                  type="button"
+                  onClick={onMarkAllNotificationsRead}
+                  className="inline-flex items-center gap-1 text-[11px] text-primary hover:underline cursor-pointer whitespace-nowrap"
                 >
-                  <div className="flex items-baseline justify-between gap-2">
-                    <p className="font-medium text-foreground">{item.title}</p>
-                    <span className="shrink-0 text-[10px] text-muted-foreground">
-                      {item.time}
-                    </span>
-                  </div>
-                  <p className="mt-0.5 text-muted-foreground leading-relaxed">
-                    {item.detail}
-                  </p>
-                </li>
-              ))}
-            </ul>
+                  <CheckCheck className="size-3.5" />
+                  <span>Marcar como lidas</span>
+                </button>
+              )}
+            </div>
+            {notifications.length === 0 ? (
+              <p className="py-4 text-center text-xs text-muted-foreground">
+                Nenhuma notificação recebida nesta sessão.
+              </p>
+            ) : (
+              <ul className="mt-2 divide-y divide-border max-h-64 overflow-y-auto">
+                {notifications.map((item) => (
+                  <li
+                    key={item.id}
+                    onClick={() => {
+                      if (item.actionUrl) onNavigate(item.actionUrl);
+                      setNotifOpen(false);
+                    }}
+                    className={`py-2.5 text-xs cursor-pointer hover:bg-accent/40 rounded px-1 transition-colors ${
+                      !item.read ? 'bg-primary/5' : ''
+                    }`}
+                  >
+                    <div className="flex items-baseline justify-between gap-2">
+                      <p className="font-medium text-foreground">{item.title}</p>
+                      <span className="shrink-0 text-[10px] text-muted-foreground">
+                        {item.time}
+                      </span>
+                    </div>
+                    <p className="mt-0.5 text-muted-foreground leading-relaxed">
+                      {item.detail}
+                    </p>
+                  </li>
+                ))}
+              </ul>
+            )}
           </div>
         )}
       </div>
@@ -190,9 +181,11 @@ export const Header: React.FC<HeaderProps> = ({
             <p className="text-xs font-semibold leading-tight text-foreground truncate max-w-[130px]">
               {user.shortName}
             </p>
-            <p className="text-[10px] leading-tight text-muted-foreground truncate max-w-[130px]">
-              {user.roleLabel}
-            </p>
+            {user.roleLabel && (
+              <p className="text-[10px] leading-tight text-muted-foreground truncate max-w-[130px]">
+                {user.roleLabel}
+              </p>
+            )}
           </div>
         </button>
 
@@ -213,7 +206,7 @@ export const Header: React.FC<HeaderProps> = ({
                 </div>
               </div>
               <p className="mt-1 text-[11px] text-muted-foreground">
-                <span className="font-semibold text-foreground/90">{user.roleBadge}</span> · {user.company} · {user.registration}
+                {[user.roleBadge, user.company, user.registration].filter(Boolean).join(' · ')}
               </p>
             </div>
 
@@ -229,41 +222,6 @@ export const Header: React.FC<HeaderProps> = ({
                 <UserCheck className="size-3.5 text-primary" />
                 <span>Meus acionamentos</span>
               </button>
-              <button
-                type="button"
-                onClick={() => {
-                  setProfileOpen(false);
-                  onNavigate(NavSection.CHAT_RESPONSAVEIS);
-                }}
-                className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-xs text-foreground hover:bg-accent cursor-pointer whitespace-nowrap"
-              >
-                <UserCheck className="size-3.5 text-primary" />
-                <span>Falar com responsáveis</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  setProfileOpen(false);
-                  onOpenHtmlModal();
-                }}
-                className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-xs text-foreground hover:bg-accent cursor-pointer whitespace-nowrap"
-              >
-                <Code2 className="size-3.5 text-primary" />
-                <span>Exportar HTML Único (CDN)</span>
-              </button>
-              {onOpenIntegrationModal && (
-                <button
-                  type="button"
-                  onClick={() => {
-                    setProfileOpen(false);
-                    onOpenIntegrationModal();
-                  }}
-                  className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-xs text-foreground hover:bg-accent cursor-pointer whitespace-nowrap"
-                >
-                  <Globe className="size-3.5 text-primary" />
-                  <span>Integração de Sistemas</span>
-                </button>
-              )}
 
               {/* Logout button */}
               <div className="mt-1 pt-1 border-t border-border">

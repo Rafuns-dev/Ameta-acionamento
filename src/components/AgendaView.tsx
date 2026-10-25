@@ -4,84 +4,58 @@ import {
   CalendarDays,
   CheckCircle2,
   Clock,
-  ExternalLink,
+  HardHat,
   MapPin,
-  Plus,
-  Radio,
+  Navigation,
+  Pause,
+  Play,
   Search,
-  User,
-  X,
 } from 'lucide-react';
-import { AgendaItem } from '../types';
+import { Acionamento, AcionamentoStatus } from '../types';
+import { formatDateTime, toDate } from '../utils/dateUtils';
 
 interface AgendaViewProps {
-  agenda: AgendaItem[];
-  onOpenDetail: (item: AgendaItem) => void;
-  onAddAgendaItem: (item: Omit<AgendaItem, 'id'>) => void;
-  onUpdateStatus: (id: string, status: AgendaItem['status']) => void;
-  onNavigateToAcionamento?: (protocol: string) => void;
+  acionamentos: Acionamento[];
+  onUpdateStatusWithPayload: (
+    docId: string,
+    newStatus: AcionamentoStatus
+  ) => Promise<void>;
+  onNavigateToAcionamentoDetail?: (item: Acionamento) => void;
   onBackHome: () => void;
+  onToast?: (msg: string) => void;
 }
 
 export const AgendaView: React.FC<AgendaViewProps> = ({
-  agenda,
-  onOpenDetail,
-  onAddAgendaItem,
-  onUpdateStatus,
-  onNavigateToAcionamento,
+  acionamentos,
+  onUpdateStatusWithPayload,
+  onNavigateToAcionamentoDetail,
   onBackHome,
 }) => {
-  const [filter, setFilter] = useState<'todos' | 'hoje' | 'concluidos'>('hoje');
   const [search, setSearch] = useState('');
-  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
 
-  // Form states
-  const [time, setTime] = useState('14:30');
-  const [date, setDate] = useState('Hoje');
-  const [client, setClient] = useState('');
-  const [location, setLocation] = useState('');
-  const [title, setTitle] = useState('');
-  const [notes, setNotes] = useState('');
-  const [acionamentoRef, setAcionamentoRef] = useState('');
+  // Filter ONLY real acionamentos with accepted/active status
+  const activeStatuses = ['Aceito', 'Em deslocamento', 'No local', 'Em atendimento', 'Pausado'];
+  
+  const vistoriasDoDia = acionamentos.filter((item) =>
+    activeStatuses.includes(item.status)
+  );
 
-  const filtered = agenda.filter((item) => {
-    const matchesSearch =
-      item.code.toLowerCase().includes(search.toLowerCase()) ||
-      item.client.toLowerCase().includes(search.toLowerCase()) ||
-      item.title.toLowerCase().includes(search.toLowerCase());
-
-    if (!matchesSearch) return false;
-
-    if (filter === 'concluidos') return item.status === 'Concluído';
-    if (filter === 'hoje') return item.date === 'Hoje';
-    return true;
+  // Sort by aceitoEm timestamp (toDate)
+  vistoriasDoDia.sort((a, b) => {
+    const timeA = toDate(a.aceitoEm || a.atualizadoEm || a.demandadoEm)?.getTime() || 0;
+    const timeB = toDate(b.aceitoEm || b.atualizadoEm || b.demandadoEm)?.getTime() || 0;
+    return timeA - timeB;
   });
 
-  const handleAddSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!client.trim() || !title.trim()) return;
-
-    const nextNum = 300 + agenda.length;
-    onAddAgendaItem({
-      code: `AG-2026-000${nextNum}`,
-      time,
-      date,
-      client: client.trim(),
-      location: location.trim() || 'São Paulo - SP',
-      title: title.trim(),
-      status: 'Confirmado',
-      acionamentoRef: acionamentoRef.trim() || undefined,
-      responsible: 'Rafael De Lima Araujo (Técnico)',
-      notes: notes.trim() || 'Agendamento adicionado ao cronograma técnico.',
-    });
-
-    setIsAddModalOpen(false);
-    setClient('');
-    setLocation('');
-    setTitle('');
-    setNotes('');
-    setAcionamentoRef('');
-  };
+  const filtered = vistoriasDoDia.filter((item) => {
+    const term = search.toLowerCase();
+    return (
+      (item.protocolo || item.protocol || '').toLowerCase().includes(term) ||
+      (item.siteId || '').toLowerCase().includes(term) ||
+      (item.siteNome || item.siteName || '').toLowerCase().includes(term) ||
+      (item.endereco || item.address || '').toLowerCase().includes(term)
+    );
+  });
 
   return (
     <div className="space-y-5">
@@ -91,23 +65,15 @@ export const AgendaView: React.FC<AgendaViewProps> = ({
           <div className="flex items-center gap-2">
             <CalendarDays className="size-5 text-primary" />
             <h1 className="text-xl font-semibold text-foreground">
-              Agenda Técnica
+              Minhas vistorias do dia
             </h1>
           </div>
           <p className="mt-1 text-sm text-muted-foreground">
-            Programação de visitas, manutenções preventivas e janelas de atendimento.
+            Vistorias aceitas e em andamento atribuídas à sua conta em tempo real.
           </p>
         </div>
 
         <div className="flex items-center gap-2">
-          <button
-            type="button"
-            onClick={() => setIsAddModalOpen(true)}
-            className="inline-flex h-8 items-center gap-1.5 rounded-md bg-primary hover:bg-primary/90 text-primary-foreground px-3 text-xs font-medium cursor-pointer shadow-xs"
-          >
-            <Plus className="size-3.5" />
-            <span>Novo agendamento</span>
-          </button>
           <button
             type="button"
             onClick={onBackHome}
@@ -119,7 +85,7 @@ export const AgendaView: React.FC<AgendaViewProps> = ({
         </div>
       </div>
 
-      {/* Filters and Search */}
+      {/* Search */}
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="relative flex-1 min-w-[240px] max-w-sm">
           <Search className="pointer-events-none absolute left-2.5 top-2.5 size-4 text-muted-foreground" />
@@ -127,240 +93,152 @@ export const AgendaView: React.FC<AgendaViewProps> = ({
             type="text"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder="Buscar por código, cliente ou serviço..."
+            placeholder="Buscar por protocolo, site ou endereço..."
             className="h-9 w-full rounded-md border border-input bg-background pl-8 pr-3 text-xs text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring"
           />
         </div>
 
-        <div className="inline-flex items-center gap-1 rounded-md border border-border bg-muted p-1">
-          {(
-            [
-              { key: 'hoje', label: 'Hoje' },
-              { key: 'todos', label: 'Todos os agendamentos' },
-              { key: 'concluidos', label: 'Concluídos' },
-            ] as const
-          ).map((tab) => (
-            <button
-              key={tab.key}
-              type="button"
-              onClick={() => setFilter(tab.key)}
-              className={`h-7 rounded px-2.5 text-xs font-medium transition-colors cursor-pointer whitespace-nowrap ${
-                filter === tab.key
-                  ? 'bg-background text-foreground shadow-xs'
-                  : 'text-muted-foreground hover:text-foreground'
-              }`}
-            >
-              {tab.label}
-            </button>
-          ))}
+        <div className="text-xs font-medium text-muted-foreground">
+          Total de vistorias ativas: <strong className="text-foreground">{vistoriasDoDia.length}</strong>
         </div>
       </div>
 
-      {/* Timeline items */}
+      {/* Vistorias list */}
       <div className="space-y-3">
         {filtered.length === 0 ? (
           <div className="rounded-md border border-border p-8 text-center text-sm text-muted-foreground">
-            Nenhum agendamento encontrado para o filtro selecionado.
+            {search
+              ? 'Nenhuma vistoria encontrada com o termo pesquisado.'
+              : 'Nenhuma vistoria ativa em andamento no momento.'}
           </div>
         ) : (
-          filtered.map((item) => (
-            <div
-              key={item.id}
-              className="rounded-md border border-border bg-background p-4 sm:p-5 hover:border-primary/40 transition-colors flex flex-col sm:flex-row sm:items-center justify-between gap-4"
-            >
-              <div className="space-y-1.5 min-w-0">
-                <div className="flex flex-wrap items-center gap-2">
-                  <span className="font-semibold text-sm text-foreground tabular-nums">
-                    {item.time}
-                  </span>
-                  <span className="text-xs text-muted-foreground tabular-nums">
-                    {item.code}
-                  </span>
-                  <span
-                    className={`inline-flex items-center rounded px-2 py-0.5 text-xs font-medium ${
-                      item.status === 'Concluído'
-                        ? 'bg-emerald-500/15 text-emerald-400'
-                        : item.status === 'Confirmado'
-                        ? 'bg-primary/15 text-primary'
-                        : 'bg-amber-500/15 text-amber-400'
-                    }`}
-                  >
-                    {item.status}
-                  </span>
-                  {item.acionamentoRef && (
-                    <span className="inline-flex items-center gap-1 text-[11px] text-amber-400 bg-amber-500/10 px-1.5 py-0.5 rounded">
-                      <Radio className="size-3" />
-                      <span>{item.acionamentoRef}</span>
+          filtered.map((item) => {
+            const protocolDisplay = item.protocolo || item.protocol || item.id;
+            const siteNameDisplay = item.siteNome || item.siteName || `Site ${item.siteId}`;
+            const addressDisplay = item.endereco || item.address || 'Endereço não informado';
+
+            return (
+              <div
+                key={item.id}
+                className="rounded-md border border-border bg-card p-4 sm:p-5 hover:border-primary/40 transition-colors flex flex-col sm:flex-row sm:items-center justify-between gap-4"
+              >
+                <div className="space-y-1.5 min-w-0 flex-1">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="font-mono font-bold text-xs text-primary px-2 py-0.5 rounded bg-primary/10 border border-primary/20">
+                      {protocolDisplay}
                     </span>
+                    <span className="font-mono text-xs text-muted-foreground bg-muted px-2 py-0.5 rounded">
+                      Site: {item.siteId}
+                    </span>
+                    <span
+                      className={`inline-flex items-center rounded px-2 py-0.5 text-xs font-semibold ${
+                        item.status === 'Em atendimento'
+                          ? 'bg-emerald-500/20 text-emerald-400 animate-pulse'
+                          : item.status === 'Em deslocamento'
+                          ? 'bg-primary/20 text-primary animate-pulse'
+                          : 'bg-amber-500/20 text-amber-400'
+                      }`}
+                    >
+                      {item.status}
+                    </span>
+                  </div>
+
+                  <p className="text-sm font-semibold text-foreground">
+                    {siteNameDisplay}
+                  </p>
+
+                  <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                    <MapPin className="size-3.5 text-primary shrink-0" />
+                    <span>{addressDisplay} {item.cidade ? `— ${item.cidade}/${item.uf}` : ''}</span>
+                  </p>
+
+                  <div className="flex flex-wrap items-center gap-3 text-[11px] text-muted-foreground pt-1">
+                    {item.aceitoEm && (
+                      <span className="flex items-center gap-1 text-emerald-400">
+                        <Clock className="size-3" />
+                        <span>Aceito em: {formatDateTime(item.aceitoEm)}</span>
+                      </span>
+                    )}
+                    {item.demandadoPorNome && (
+                      <span>
+                        Demandado por: <strong className="text-foreground">{item.demandadoPorNome}</strong>
+                      </span>
+                    )}
+                  </div>
+                </div>
+
+                {/* Workflow Buttons */}
+                <div className="flex flex-wrap sm:flex-col items-start sm:items-end gap-2 shrink-0 border-t sm:border-t-0 border-border/70 pt-2 sm:pt-0">
+                  {item.status === 'Aceito' && (
+                    <button
+                      type="button"
+                      onClick={() => onUpdateStatusWithPayload(item.id, 'Em deslocamento')}
+                      className="inline-flex h-8 items-center gap-1 rounded bg-primary hover:bg-primary/90 text-primary-foreground px-3 text-xs font-medium cursor-pointer"
+                    >
+                      <Navigation className="size-3.5" />
+                      <span>Iniciar Deslocamento</span>
+                    </button>
+                  )}
+
+                  {item.status === 'Em deslocamento' && (
+                    <button
+                      type="button"
+                      onClick={() => onUpdateStatusWithPayload(item.id, 'No local')}
+                      className="inline-flex h-8 items-center gap-1 rounded bg-emerald-600 hover:bg-emerald-500 text-white px-3 text-xs font-semibold cursor-pointer"
+                    >
+                      <CheckCircle2 className="size-3.5" />
+                      <span>Confirmar Chegada (No local)</span>
+                    </button>
+                  )}
+
+                  {item.status === 'No local' && (
+                    <button
+                      type="button"
+                      onClick={() => onUpdateStatusWithPayload(item.id, 'Em atendimento')}
+                      className="inline-flex h-8 items-center gap-1 rounded bg-emerald-600 hover:bg-emerald-500 text-white px-3 text-xs font-semibold cursor-pointer"
+                    >
+                      <HardHat className="size-3.5" />
+                      <span>Iniciar Vistoria</span>
+                    </button>
+                  )}
+
+                  {item.status === 'Em atendimento' && (
+                    <button
+                      type="button"
+                      onClick={() => onUpdateStatusWithPayload(item.id, 'Pausado')}
+                      className="inline-flex h-8 items-center gap-1 rounded border border-border bg-sidebar hover:bg-accent text-foreground px-2.5 text-xs font-medium cursor-pointer"
+                    >
+                      <Pause className="size-3 text-amber-400" />
+                      <span>Pausar</span>
+                    </button>
+                  )}
+
+                  {item.status === 'Pausado' && (
+                    <button
+                      type="button"
+                      onClick={() => onUpdateStatusWithPayload(item.id, 'Em atendimento')}
+                      className="inline-flex h-8 items-center gap-1 rounded bg-primary hover:bg-primary/90 text-primary-foreground px-3 text-xs font-medium cursor-pointer"
+                    >
+                      <Play className="size-3.5" />
+                      <span>Retomar</span>
+                    </button>
+                  )}
+
+                  {onNavigateToAcionamentoDetail && (
+                    <button
+                      type="button"
+                      onClick={() => onNavigateToAcionamentoDetail(item)}
+                      className="inline-flex h-8 items-center gap-1 rounded border border-input bg-background px-3 text-xs font-medium text-foreground hover:bg-accent cursor-pointer"
+                    >
+                      <span>Ver detalhes</span>
+                    </button>
                   )}
                 </div>
-
-                <p className="text-sm font-semibold text-foreground">
-                  {item.title}
-                </p>
-
-                <p className="text-xs text-muted-foreground">
-                  {item.client}
-                </p>
-
-                <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                  <MapPin className="size-3.5 text-primary shrink-0" />
-                  <span>{item.location}</span>
-                </p>
               </div>
-
-              {/* Actions */}
-              <div className="flex flex-wrap sm:flex-col items-start sm:items-end gap-2 shrink-0 border-t sm:border-t-0 border-border/70 pt-2 sm:pt-0">
-                <button
-                  type="button"
-                  onClick={() => onOpenDetail(item)}
-                  className="inline-flex h-8 items-center gap-1.5 rounded border border-input bg-background px-3 text-xs font-medium text-foreground hover:bg-accent cursor-pointer"
-                >
-                  <span>Ver detalhes</span>
-                </button>
-
-                {item.status !== 'Concluído' ? (
-                  <button
-                    type="button"
-                    onClick={() => onUpdateStatus(item.id, 'Concluído')}
-                    className="inline-flex h-8 items-center gap-1.5 rounded bg-emerald-600 hover:bg-emerald-500 text-white px-3 text-xs font-medium cursor-pointer"
-                  >
-                    <CheckCircle2 className="size-3.5" />
-                    <span>Concluir visita</span>
-                  </button>
-                ) : (
-                  <span className="text-[11px] text-emerald-400 font-medium flex items-center gap-1">
-                    <CheckCircle2 className="size-3.5" />
-                    <span>Check-out realizado</span>
-                  </span>
-                )}
-              </div>
-            </div>
-          ))
+            );
+          })
         )}
       </div>
-
-      {/* Modal: Novo Agendamento */}
-      {isAddModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-          <div
-            className="fixed inset-0 bg-black/75 backdrop-blur-xs"
-            onClick={() => setIsAddModalOpen(false)}
-          />
-          <div className="relative z-10 w-full max-w-lg rounded-md border border-border bg-sidebar p-5 shadow-2xl space-y-4">
-            <div className="flex items-center justify-between border-b border-border pb-3">
-              <h2 className="text-base font-semibold text-foreground">
-                Agendar Novo Atendimento
-              </h2>
-              <button
-                type="button"
-                onClick={() => setIsAddModalOpen(false)}
-                className="rounded-md p-1.5 text-muted-foreground hover:bg-accent hover:text-foreground cursor-pointer"
-              >
-                <X className="size-4" />
-              </button>
-            </div>
-
-            <form onSubmit={handleAddSubmit} className="space-y-3 text-xs">
-              <div className="grid gap-3 sm:grid-cols-2">
-                <div>
-                  <label className="block text-muted-foreground mb-1">Horário *</label>
-                  <input
-                    type="time"
-                    value={time}
-                    onChange={(e) => setTime(e.target.value)}
-                    required
-                    className="h-8 w-full rounded border border-input bg-background px-2.5 text-foreground tabular-nums"
-                  />
-                </div>
-                <div>
-                  <label className="block text-muted-foreground mb-1">Data</label>
-                  <input
-                    type="text"
-                    value={date}
-                    onChange={(e) => setDate(e.target.value)}
-                    placeholder="Ex: Hoje ou 24/10/2026"
-                    className="h-8 w-full rounded border border-input bg-background px-2.5 text-foreground"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-muted-foreground mb-1">Cliente / Unidade *</label>
-                <input
-                  type="text"
-                  value={client}
-                  onChange={(e) => setClient(e.target.value)}
-                  placeholder="Ex: Hospital Santa Helena — Ala Norte"
-                  required
-                  className="h-8 w-full rounded border border-input bg-background px-2.5 text-foreground"
-                />
-              </div>
-
-              <div>
-                <label className="block text-muted-foreground mb-1">Título do Serviço *</label>
-                <input
-                  type="text"
-                  value={title}
-                  onChange={(e) => setTitle(e.target.value)}
-                  placeholder="Ex: Manutenção periódica de gerador e nobreak"
-                  required
-                  className="h-8 w-full rounded border border-input bg-background px-2.5 text-foreground"
-                />
-              </div>
-
-              <div>
-                <label className="block text-muted-foreground mb-1">Endereço Completo</label>
-                <input
-                  type="text"
-                  value={location}
-                  onChange={(e) => setLocation(e.target.value)}
-                  placeholder="Ex: Rua Maestro Cardim, 769 - Bela Vista, SP"
-                  className="h-8 w-full rounded border border-input bg-background px-2.5 text-foreground"
-                />
-              </div>
-
-              <div>
-                <label className="block text-muted-foreground mb-1">Vincular a Acionamento (opcional)</label>
-                <input
-                  type="text"
-                  value={acionamentoRef}
-                  onChange={(e) => setAcionamentoRef(e.target.value)}
-                  placeholder="Ex: AC-2026-001055"
-                  className="h-8 w-full rounded border border-input bg-background px-2.5 text-foreground"
-                />
-              </div>
-
-              <div>
-                <label className="block text-muted-foreground mb-1">Observações do Agendamento</label>
-                <textarea
-                  rows={2}
-                  value={notes}
-                  onChange={(e) => setNotes(e.target.value)}
-                  placeholder="Orientações para portaria, crachá, ferramentas necessárias..."
-                  className="w-full rounded border border-input bg-background p-2.5 text-foreground"
-                />
-              </div>
-
-              <div className="flex justify-end gap-2 border-t border-border pt-3">
-                <button
-                  type="button"
-                  onClick={() => setIsAddModalOpen(false)}
-                  className="h-8 rounded border border-input px-3 font-medium text-muted-foreground hover:bg-accent cursor-pointer"
-                >
-                  Cancelar
-                </button>
-                <button
-                  type="submit"
-                  className="h-8 rounded bg-primary hover:bg-primary/90 text-primary-foreground px-4 font-medium cursor-pointer"
-                >
-                  Salvar na Agenda
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
     </div>
   );
 };
