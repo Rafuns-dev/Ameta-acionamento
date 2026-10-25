@@ -78,6 +78,10 @@ export async function updateAcionamentoStatusInFirestore(params: UpdateAcionamen
 
   const payload: Record<string, any> = {
     status,
+    statusPlanilha: status,
+    statusNokia: status,
+    planilhaStatus: status,
+    nokiaStatus: status,
     atualizadoEm: nowIso,
     historico: updatedHistorico,
   };
