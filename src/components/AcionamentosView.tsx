@@ -495,6 +495,41 @@ export const AcionamentosView: React.FC<AcionamentosViewProps> = ({
                       </div>
                     ) : null}
 
+                    {/* Coordinator Universal Status Selector */}
+                    {((currentUser?.email || '').toLowerCase().includes('coord') || (currentUser?.email || '').toLowerCase().includes('admin') || (currentUser?.email || '').toLowerCase().includes('gerente') || (currentUser?.email || '').toLowerCase().includes('gestao') || (currentUser?.email || '').toLowerCase().includes('dono') || (currentUser?.email || '').toLowerCase().includes('operacao') || (currentUser?.email || '').toLowerCase().includes('telecom') || (currentUser?.email || '').toLowerCase().includes('ameta')) && (
+                      <div className="rounded-lg border border-amber-500/50 bg-amber-500/10 p-3 flex flex-wrap items-center justify-between gap-2">
+                        <span className="text-xs font-bold text-amber-300">
+                          ⚙️ Painel do Coordenador — Alterar Status:
+                        </span>
+                        <div className="flex items-center gap-2">
+                          <select
+                            value={item.status}
+                            disabled={actionLoading}
+                            onChange={async (e) => {
+                              const newStatus = e.target.value as AcionamentoStatus;
+                              try {
+                                await onUpdateStatusWithPayload(item.id, newStatus);
+                                onToast?.(`Status alterado para "${newStatus}" com sucesso!`);
+                              } catch (err) {
+                                onToast?.('Erro ao alterar status.');
+                              }
+                            }}
+                            className="rounded-md border border-input bg-background px-2.5 py-1 text-xs font-bold text-foreground cursor-pointer focus:outline-none focus:ring-1 focus:ring-primary"
+                          >
+                            <option value="Aguardando aceite">Aguardando aceite</option>
+                            <option value="Aceito">Aceito</option>
+                            <option value="Recusado">Recusado</option>
+                            <option value="Em deslocamento">Em deslocamento</option>
+                            <option value="No local">No local</option>
+                            <option value="Em atendimento">Em atendimento</option>
+                            <option value="Pausado">Pausado</option>
+                            <option value="Concluído">Concluído</option>
+                            <option value="Cancelado">Cancelado</option>
+                          </select>
+                        </div>
+                      </div>
+                    )}
+
                     {/* Historical entries */}
                     {item.historico && item.historico.length > 0 && (
                       <div className="pt-1">

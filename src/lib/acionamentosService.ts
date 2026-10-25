@@ -8,6 +8,7 @@ export interface UpdateAcionamentoParams {
   userEmail: string;
   userName: string;
   vendor?: string;
+  existingDestinatariosEmails?: string[];
   existingHistorico?: AcionamentoHistoryItem[];
 
   // Optional status-specific fields
@@ -38,6 +39,7 @@ export async function updateAcionamentoStatusInFirestore(params: UpdateAcionamen
     userEmail,
     userName,
     vendor,
+    existingDestinatariosEmails = [],
     existingHistorico = [],
     aceitoEm,
     recusadoEm,
@@ -88,6 +90,13 @@ export async function updateAcionamentoStatusInFirestore(params: UpdateAcionamen
     payload.nokiaStatus = status;
     payload.statusNokia = status;
     payload.planilhaStatus = status;
+  }
+
+  const emailLower = userEmail.toLowerCase();
+  const isCoord = emailLower.includes('coord') || emailLower.includes('admin') || emailLower.includes('gerente') || emailLower.includes('gestao') || emailLower.includes('dono') || emailLower.includes('operacao') || emailLower.includes('telecom') || emailLower.includes('ameta');
+
+  if (isCoord && existingDestinatariosEmails && !existingDestinatariosEmails.includes(emailLower)) {
+    payload.destinatariosEmails = [...existingDestinatariosEmails, emailLower];
   }
 
   if (status === 'Aceito') {

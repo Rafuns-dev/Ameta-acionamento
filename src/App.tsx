@@ -291,6 +291,7 @@ export default function App() {
       userEmail: currentUser.email.toLowerCase(),
       userName: currentUser.fullName || currentUser.shortName,
       vendor: targetItem.vendor,
+      existingDestinatariosEmails: targetItem.destinatariosEmails || [],
       existingHistorico: targetItem.historico || [],
       ...extraFields,
     });
