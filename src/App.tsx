@@ -91,13 +91,19 @@ export default function App() {
           (initialsParts[1]?.charAt(0) || '')
         ).toUpperCase() || 'AM';
 
+        const isCoord = email.includes('coord') || email.includes('admin') || email.includes('gerente') || email.includes('gestao') || email.includes('dono') || email.includes('operacao') || email.includes('telecom') || email.includes('ameta');
+        const roleBadge = isCoord ? 'Coordenador / Gestor' : 'Técnico de Campo';
+        const roleLabel = isCoord ? 'Coordenação & Donos (Permissão de Alteração)' : 'Equipe de Vistoria';
+
         const userFromAuth: AuthUser = {
           id: fbUser.uid,
           email: fbUser.email,
           shortName,
           fullName,
           initials,
-          avatarColor: 'bg-emerald-600',
+          roleBadge,
+          roleLabel,
+          avatarColor: isCoord ? 'bg-amber-600' : 'bg-emerald-600',
         };
         setCurrentUser(userFromAuth);
       } else {
@@ -281,6 +287,7 @@ export default function App() {
       status: newStatus,
       userEmail: currentUser.email.toLowerCase(),
       userName: currentUser.fullName || currentUser.shortName,
+      vendor: targetItem.vendor,
       existingHistorico: targetItem.historico || [],
       ...extraFields,
     });

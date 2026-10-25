@@ -7,6 +7,7 @@ export interface UpdateAcionamentoParams {
   status: AcionamentoStatus;
   userEmail: string;
   userName: string;
+  vendor?: string;
   existingHistorico?: AcionamentoHistoryItem[];
 
   // Optional status-specific fields
@@ -36,6 +37,7 @@ export async function updateAcionamentoStatusInFirestore(params: UpdateAcionamen
     status,
     userEmail,
     userName,
+    vendor,
     existingHistorico = [],
     aceitoEm,
     recusadoEm,
@@ -81,6 +83,12 @@ export async function updateAcionamentoStatusInFirestore(params: UpdateAcionamen
     atualizadoEm: nowIso,
     historico: updatedHistorico,
   };
+
+  if (vendor && String(vendor).toUpperCase() === 'NOKIA') {
+    payload.nokiaStatus = status;
+    payload.statusNokia = status;
+    payload.planilhaStatus = status;
+  }
 
   if (status === 'Aceito') {
     payload.aceitoPorEmail = userEmail.toLowerCase();
