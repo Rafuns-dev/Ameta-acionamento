@@ -178,6 +178,8 @@ export default function App() {
             concluidoEm: data.concluidoEm,
             resumoConclusao: data.resumoConclusao,
             pendencias: data.pendencias,
+            planilhaAtualizadaEm: data.planilhaAtualizadaEm,
+            planilhaResumo: data.planilhaResumo,
 
             // Optional fields if present
             towerType: data.towerType,

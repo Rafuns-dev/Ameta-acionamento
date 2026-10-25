@@ -4,6 +4,7 @@ import {
   Clock,
   Compass,
   Copy,
+  FileText,
   HardHat,
   Info,
   Key,
@@ -477,6 +478,22 @@ export const AcionamentosView: React.FC<AcionamentosViewProps> = ({
                         </div>
                       </div>
                     )}
+
+                    {/* Planilha do Telecom Status */}
+                    {item.planilhaAtualizadaEm ? (
+                      <div className="rounded-lg border border-primary/35 bg-primary/10 p-2.5 text-xs text-primary font-medium flex items-center gap-1.5">
+                        <FileText className="size-3.5 shrink-0" />
+                        <span>
+                          Planilha do Telecom atualizada em {formatDateTime(item.planilhaAtualizadaEm)}
+                          {item.planilhaResumo ? ` · ${item.planilhaResumo}` : ''}
+                        </span>
+                      </div>
+                    ) : isConcluido ? (
+                      <div className="rounded-lg border border-border bg-muted/30 p-2.5 text-xs text-muted-foreground flex items-center gap-1.5">
+                        <Clock className="size-3.5 shrink-0" />
+                        <span>Aguardando atualização da planilha do Telecom</span>
+                      </div>
+                    ) : null}
 
                     {/* Historical entries */}
                     {item.historico && item.historico.length > 0 && (

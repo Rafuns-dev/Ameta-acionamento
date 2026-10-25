@@ -98,6 +98,8 @@ export interface Acionamento {
   concluidoEm?: string;
   resumoConclusao?: string;
   pendencias?: string;
+  planilhaAtualizadaEm?: string;
+  planilhaResumo?: string;
 
   // UI optional fields if passed
   externalId?: string;
