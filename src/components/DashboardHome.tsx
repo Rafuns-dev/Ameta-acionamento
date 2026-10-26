@@ -21,6 +21,7 @@ import {
   NavSection,
 } from '../types';
 import { formatDateTime, toDate } from '../utils/dateUtils';
+import { TipoBadge } from '../utils/tipoAcionamento';
 
 interface DashboardHomeProps {
   currentUser: AuthUser;
@@ -215,6 +216,7 @@ export const DashboardHome: React.FC<DashboardHomeProps> = ({
                   <span className="text-xs font-bold text-primary uppercase tracking-wide">
                     Em Deslocamento Agora:
                   </span>
+                  <TipoBadge tipoOrItem={siteEmDeslocamento} />
                   <span className="font-mono font-bold text-xs text-foreground bg-background px-1.5 py-0.5 rounded border border-border">
                     {siteEmDeslocamento.siteId}
                   </span>
@@ -262,7 +264,7 @@ export const DashboardHome: React.FC<DashboardHomeProps> = ({
             <Radio className="size-4 text-amber-400 animate-pulse" />
             <h2 className="text-sm font-semibold text-foreground">
               {oldestPendingItem
-                ? 'Destaque: Vistoria Mais Antiga Aguardando Aceite'
+                ? 'Destaque: Demanda Mais Antiga Aguardando Aceite'
                 : 'Destaque de Acionamento Ativo'}
             </h2>
           </div>
@@ -284,6 +286,7 @@ export const DashboardHome: React.FC<DashboardHomeProps> = ({
                   <span className="font-mono font-bold text-xs text-primary px-2 py-0.5 rounded bg-primary/10 border border-primary/20">
                     {activeSite.protocolo || activeSite.protocol || activeSite.id}
                   </span>
+                  <TipoBadge tipoOrItem={activeSite} />
                   <span className="font-semibold text-base text-foreground truncate">
                     {activeSite.siteNome || activeSite.siteName || `Site ${activeSite.siteId}`}
                   </span>
@@ -371,7 +374,15 @@ export const DashboardHome: React.FC<DashboardHomeProps> = ({
                 <>
                   <button
                     type="button"
-                    onClick={() => onUpdateAcionamentoStatus(activeSite.id, 'Aceito')}
+                    onClick={async () => {
+                      try {
+                        await onUpdateAcionamentoStatus(activeSite.id, 'Aceito');
+                        onToast?.(`Vistoria no site ${activeSite.siteId} aceita com sucesso!`);
+                      } catch (err: any) {
+                        const errCode = err?.code || err?.message || 'erro';
+                        onToast?.(`Erro ao aceitar demanda: ${errCode}`);
+                      }
+                    }}
                     className="inline-flex h-8 items-center gap-1.5 rounded-md bg-emerald-600 hover:bg-emerald-500 text-white px-3.5 text-xs font-semibold cursor-pointer shadow-xs transition-colors"
                   >
                     <UserCheck className="size-3.5" />
@@ -379,8 +390,9 @@ export const DashboardHome: React.FC<DashboardHomeProps> = ({
                   </button>
                   <button
                     type="button"
-                    onClick={() => onUpdateAcionamentoStatus(activeSite.id, 'Recusado')}
+                    onClick={() => onNavigate(NavSection.ACIONAMENTOS)}
                     className="inline-flex h-8 items-center gap-1.5 rounded-md bg-destructive/15 hover:bg-destructive/25 text-destructive border border-destructive/30 px-3.5 text-xs font-semibold cursor-pointer transition-colors"
+                    title="Informe o motivo da recusa na lista"
                   >
                     <UserX className="size-3.5" />
                     <span>Recusar</span>
@@ -393,7 +405,16 @@ export const DashboardHome: React.FC<DashboardHomeProps> = ({
                   <span className="text-xs font-bold text-amber-300">⚙️ Coordenador — Alterar Status:</span>
                   <select
                     value={activeSite.status}
-                    onChange={(e) => onUpdateAcionamentoStatus(activeSite.id, e.target.value as AcionamentoStatus)}
+                    onChange={async (e) => {
+                      const newStatus = e.target.value as AcionamentoStatus;
+                      try {
+                        await onUpdateAcionamentoStatus(activeSite.id, newStatus);
+                        onToast?.(`Status alterado para "${newStatus}" com sucesso!`);
+                      } catch (err: any) {
+                        const errCode = err?.code || err?.message || 'erro';
+                        onToast?.(`Erro ao alterar status: ${errCode}`);
+                      }
+                    }}
                     className="rounded border border-input bg-background px-2 py-1 text-xs font-bold text-foreground cursor-pointer focus:outline-none focus:ring-1 focus:ring-primary"
                   >
                     <option value="Aguardando aceite">Aguardando aceite</option>

@@ -13,6 +13,7 @@ import {
 } from 'lucide-react';
 import { Acionamento, AcionamentoStatus } from '../types';
 import { formatDateTime, toDate } from '../utils/dateUtils';
+import { TipoBadge } from '../utils/tipoAcionamento';
 
 interface AgendaViewProps {
   acionamentos: Acionamento[];
@@ -127,6 +128,7 @@ export const AgendaView: React.FC<AgendaViewProps> = ({
                     <span className="font-mono font-bold text-xs text-primary px-2 py-0.5 rounded bg-primary/10 border border-primary/20">
                       {protocolDisplay}
                     </span>
+                    <TipoBadge tipoOrItem={item} />
                     <span className="font-mono text-xs text-muted-foreground bg-muted px-2 py-0.5 rounded">
                       Site: {item.siteId}
                     </span>

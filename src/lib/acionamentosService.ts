@@ -7,9 +7,6 @@ export interface UpdateAcionamentoParams {
   status: AcionamentoStatus;
   userEmail: string;
   userName: string;
-  vendor?: string;
-  isCoord?: boolean;
-  existingDestinatariosEmails?: string[];
   existingHistorico?: AcionamentoHistoryItem[];
 
   // Optional status-specific fields
@@ -31,7 +28,11 @@ export interface UpdateAcionamentoParams {
  * - History entries are written in the exact format:
  *   { data: ISO, autor: string, email: string, acao: string, status: string, detalhes?: string }
  *   without 'por' or 'em'
- * - Strictly updates only fields allowed by Requirement 6
+ * - Payload contains ONLY the permitted fields:
+ *   status, atualizadoEm, historico, aceitoPorEmail, aceitoPorNome, aceitoEm,
+ *   recusadoPorEmail, recusadoPorNome, recusadoEm, motivoRecusa, checkinEm,
+ *   checkinLocal, checkoutEm, checkoutLocal, concluidoEm, resumoConclusao, pendencias.
+ * - Never sends nokiaStatus, statusNokia, planilhaStatus or destinatariosEmails.
  */
 export async function updateAcionamentoStatusInFirestore(params: UpdateAcionamentoParams): Promise<void> {
   const {
@@ -39,9 +40,6 @@ export async function updateAcionamentoStatusInFirestore(params: UpdateAcionamen
     status,
     userEmail,
     userName,
-    vendor,
-    isCoord = false,
-    existingDestinatariosEmails = [],
     existingHistorico = [],
     aceitoEm,
     recusadoEm,
@@ -87,17 +85,6 @@ export async function updateAcionamentoStatusInFirestore(params: UpdateAcionamen
     atualizadoEm: nowIso,
     historico: updatedHistorico,
   };
-
-  if (vendor && String(vendor).toUpperCase() === 'NOKIA') {
-    payload.nokiaStatus = status;
-    payload.statusNokia = status;
-    payload.planilhaStatus = status;
-  }
-
-  const emailLower = userEmail.toLowerCase();
-  if (isCoord && existingDestinatariosEmails && !existingDestinatariosEmails.includes(emailLower)) {
-    payload.destinatariosEmails = [...existingDestinatariosEmails, emailLower];
-  }
 
   if (status === 'Aceito') {
     payload.aceitoPorEmail = userEmail.toLowerCase();

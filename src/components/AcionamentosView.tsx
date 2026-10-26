@@ -8,6 +8,7 @@ import {
   HardHat,
   Info,
   Key,
+  Layers,
   Mail,
   MapPin,
   Navigation,
@@ -26,6 +27,7 @@ import {
   AuthUser,
 } from '../types';
 import { formatDateTime } from '../utils/dateUtils';
+import { getTipoAcionamento, TipoBadge } from '../utils/tipoAcionamento';
 
 interface AcionamentosViewProps {
   acionamentos: Acionamento[];
@@ -81,9 +83,21 @@ export const AcionamentosView: React.FC<AcionamentosViewProps> = ({
 
   const isCoord = Boolean(currentUser?.isCoord);
 
+  // 4) Para coordenação, filtros "Tipo", "Plataforma" e "Equipe"
+  const [selectedTipoCoordFilter, setSelectedTipoCoordFilter] = useState<'TODOS' | 'VISTORIA' | 'EXECUTOR'>('TODOS');
+  const [selectedPlataformaFilter, setSelectedPlataformaFilter] = useState<string>('todas');
   const [selectedEquipeFilter, setSelectedEquipeFilter] = useState<string>('todas');
+
   const uniqueEquipes = Array.from(
     new Set(acionamentos.map((a) => a.equipe).filter(Boolean))
+  ) as string[];
+
+  const uniquePlataformas = Array.from(
+    new Set(
+      acionamentos
+        .map((a) => (a.vendor || a.origem || '').toUpperCase())
+        .filter(Boolean)
+    )
   ) as string[];
 
   // Count pending items in 'Aguardando aceite'
@@ -109,8 +123,21 @@ export const AcionamentosView: React.FC<AcionamentosViewProps> = ({
 
     if (!matchesSearch) return false;
 
-    if (isCoord && selectedEquipeFilter !== 'todas') {
-      if (a.equipe !== selectedEquipeFilter) return false;
+    // Filtros de coordenação
+    if (isCoord) {
+      if (selectedTipoCoordFilter !== 'TODOS') {
+        const itemTipo = getTipoAcionamento(a);
+        if (itemTipo !== selectedTipoCoordFilter) return false;
+      }
+
+      if (selectedPlataformaFilter !== 'todas') {
+        const plat = (a.vendor || a.origem || '').toUpperCase();
+        if (plat !== selectedPlataformaFilter.toUpperCase()) return false;
+      }
+
+      if (selectedEquipeFilter !== 'todas') {
+        if (a.equipe !== selectedEquipeFilter) return false;
+      }
     }
 
     if (filter === 'restantes')
@@ -134,8 +161,9 @@ export const AcionamentosView: React.FC<AcionamentosViewProps> = ({
     try {
       await onUpdateStatusWithPayload(item.id, 'Aceito');
       onToast?.(`Vistoria no site ${item.siteId} aceita com sucesso!`);
-    } catch (e) {
-      onToast?.('Erro ao aceitar demanda no Firebase.');
+    } catch (e: any) {
+      const errCode = e?.code || e?.message || 'erro';
+      onToast?.(`Erro ao aceitar demanda: ${errCode}`);
     } finally {
       setActionLoading(false);
     }
@@ -143,7 +171,8 @@ export const AcionamentosView: React.FC<AcionamentosViewProps> = ({
 
   const handleConfirmRecusar = async () => {
     if (!recusarItem) return;
-    if (!motivoRecusaInput.trim()) {
+    const motivo = motivoRecusaInput.trim();
+    if (!motivo) {
       onToast?.('Por favor, informe o motivo da recusa.');
       return;
     }
@@ -151,15 +180,19 @@ export const AcionamentosView: React.FC<AcionamentosViewProps> = ({
     setActionLoading(true);
     try {
       const nowIso = new Date().toISOString();
+      const targetSiteId = recusarItem.siteId;
       await onUpdateStatusWithPayload(recusarItem.id, 'Recusado', {
-        motivoRecusa: motivoRecusaInput.trim(),
+        motivoRecusa: motivo,
         recusadoEm: nowIso,
       });
-      onToast?.(`Demanda do site ${recusarItem.siteId} recusada.`);
+      onToast?.(`Demanda do site ${targetSiteId} recusada.`);
       setRecusarItem(null);
       setMotivoRecusaInput('');
-    } catch (e) {
-      onToast?.('Erro ao registrar recusa no Firebase.');
+      // 4) Depois de recusar, o acionamento deve sair imediatamente da lista "Restantes" e aparecer em "Concluídos / Encerrados" com o motivo
+      setFilter('concluidos');
+    } catch (e: any) {
+      const errCode = e?.code || e?.message || 'erro';
+      onToast?.(`Erro ao registrar recusa: ${errCode}`);
     } finally {
       setActionLoading(false);
     }
@@ -177,8 +210,9 @@ export const AcionamentosView: React.FC<AcionamentosViewProps> = ({
       onToast?.(`Check-in de chegada ao site ${checkinItem.siteId} confirmado!`);
       setCheckinItem(null);
       setCheckinLocalInput('');
-    } catch (e) {
-      onToast?.('Erro ao registrar check-in no Firebase.');
+    } catch (e: any) {
+      const errCode = e?.code || e?.message || 'erro';
+      onToast?.(`Erro ao registrar check-in: ${errCode}`);
     } finally {
       setActionLoading(false);
     }
@@ -205,8 +239,10 @@ export const AcionamentosView: React.FC<AcionamentosViewProps> = ({
       setConcluirItem(null);
       setResumoConclusaoInput('');
       setPendenciasInput('');
-    } catch (e) {
-      onToast?.('Erro ao registrar conclusão no Firebase.');
+      setFilter('concluidos');
+    } catch (e: any) {
+      const errCode = e?.code || e?.message || 'erro';
+      onToast?.(`Erro ao registrar conclusão: ${errCode}`);
     } finally {
       setActionLoading(false);
     }
@@ -322,41 +358,127 @@ export const AcionamentosView: React.FC<AcionamentosViewProps> = ({
         </div>
       </div>
 
-      {/* Visão por Equipes para Coordenadores */}
-      {isCoord && uniqueEquipes.length > 0 && (
-        <div className="flex flex-wrap items-center gap-2 rounded-lg border border-border bg-sidebar/50 p-3 text-xs">
-          <span className="font-semibold text-foreground flex items-center gap-1.5">
-            <Users className="size-3.5 text-primary" />
-            <span>Visão por Equipes:</span>
-          </span>
-          <button
-            type="button"
-            onClick={() => setSelectedEquipeFilter('todas')}
-            className={`h-7 rounded px-2.5 text-xs font-medium transition-colors cursor-pointer ${
-              selectedEquipeFilter === 'todas'
-                ? 'bg-primary text-primary-foreground font-semibold'
-                : 'bg-background border border-border text-muted-foreground hover:text-foreground'
-            }`}
-          >
-            Todas as Equipes ({acionamentos.length})
-          </button>
-          {uniqueEquipes.map((eq) => {
-            const count = acionamentos.filter((a) => a.equipe === eq).length;
-            return (
+      {/* 4) Filtros da Coordenação: Tipo, Plataforma e Equipe */}
+      {isCoord && (
+        <div className="rounded-lg border border-border bg-sidebar/60 p-3 sm:p-3.5 space-y-2.5 text-xs">
+          {/* Linha 1: Filtro de Tipo (Todos / Vistoria / Executor) */}
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="font-bold text-foreground flex items-center gap-1.5 min-w-[85px]">
+              <Layers className="size-3.5 text-primary" />
+              <span>Tipo:</span>
+            </span>
+            <button
+              type="button"
+              onClick={() => setSelectedTipoCoordFilter('TODOS')}
+              className={`h-7 rounded px-3 text-xs font-medium transition-colors cursor-pointer ${
+                selectedTipoCoordFilter === 'TODOS'
+                  ? 'bg-primary text-primary-foreground font-semibold shadow-xs'
+                  : 'bg-background border border-border text-muted-foreground hover:text-foreground'
+              }`}
+            >
+              Todos ({acionamentos.length})
+            </button>
+            <button
+              type="button"
+              onClick={() => setSelectedTipoCoordFilter('VISTORIA')}
+              className={`h-7 rounded px-3 text-xs font-medium transition-colors cursor-pointer flex items-center gap-1.5 ${
+                selectedTipoCoordFilter === 'VISTORIA'
+                  ? 'bg-blue-600 text-white font-semibold shadow-xs'
+                  : 'bg-background border border-blue-500/30 text-blue-400 hover:bg-blue-500/10'
+              }`}
+            >
+              <span className="size-1.5 rounded-full bg-blue-400" />
+              <span>Vistoria ({acionamentos.filter((a) => getTipoAcionamento(a) === 'VISTORIA').length})</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setSelectedTipoCoordFilter('EXECUTOR')}
+              className={`h-7 rounded px-3 text-xs font-medium transition-colors cursor-pointer flex items-center gap-1.5 ${
+                selectedTipoCoordFilter === 'EXECUTOR'
+                  ? 'bg-orange-600 text-white font-semibold shadow-xs'
+                  : 'bg-background border border-orange-500/30 text-orange-400 hover:bg-orange-500/10'
+              }`}
+            >
+              <span className="size-1.5 rounded-full bg-orange-400" />
+              <span>Executor ({acionamentos.filter((a) => getTipoAcionamento(a) === 'EXECUTOR').length})</span>
+            </button>
+          </div>
+
+          {/* Linha 2: Filtro de Plataforma */}
+          {uniquePlataformas.length > 0 && (
+            <div className="flex flex-wrap items-center gap-2 pt-2 border-t border-border/50">
+              <span className="font-bold text-foreground flex items-center gap-1.5 min-w-[85px]">
+                <Radio className="size-3.5 text-primary" />
+                <span>Plataforma:</span>
+              </span>
               <button
-                key={eq}
                 type="button"
-                onClick={() => setSelectedEquipeFilter(eq)}
+                onClick={() => setSelectedPlataformaFilter('todas')}
                 className={`h-7 rounded px-2.5 text-xs font-medium transition-colors cursor-pointer ${
-                  selectedEquipeFilter === eq
-                    ? 'bg-primary text-primary-foreground font-semibold'
+                  selectedPlataformaFilter === 'todas'
+                    ? 'bg-primary text-primary-foreground font-semibold shadow-xs'
                     : 'bg-background border border-border text-muted-foreground hover:text-foreground'
                 }`}
               >
-                {eq} ({count})
+                Todas ({acionamentos.length})
               </button>
-            );
-          })}
+              {uniquePlataformas.map((plat) => {
+                const count = acionamentos.filter((a) => (a.vendor || a.origem || '').toUpperCase() === plat.toUpperCase()).length;
+                return (
+                  <button
+                    key={plat}
+                    type="button"
+                    onClick={() => setSelectedPlataformaFilter(plat)}
+                    className={`h-7 rounded px-2.5 text-xs font-medium transition-colors cursor-pointer uppercase ${
+                      selectedPlataformaFilter.toUpperCase() === plat.toUpperCase()
+                        ? 'bg-primary text-primary-foreground font-semibold shadow-xs'
+                        : 'bg-background border border-border text-muted-foreground hover:text-foreground'
+                    }`}
+                  >
+                    {plat} ({count})
+                  </button>
+                );
+              })}
+            </div>
+          )}
+
+          {/* Linha 3: Filtro de Equipe */}
+          {uniqueEquipes.length > 0 && (
+            <div className="flex flex-wrap items-center gap-2 pt-2 border-t border-border/50">
+              <span className="font-bold text-foreground flex items-center gap-1.5 min-w-[85px]">
+                <Users className="size-3.5 text-primary" />
+                <span>Equipe:</span>
+              </span>
+              <button
+                type="button"
+                onClick={() => setSelectedEquipeFilter('todas')}
+                className={`h-7 rounded px-2.5 text-xs font-medium transition-colors cursor-pointer ${
+                  selectedEquipeFilter === 'todas'
+                    ? 'bg-primary text-primary-foreground font-semibold shadow-xs'
+                    : 'bg-background border border-border text-muted-foreground hover:text-foreground'
+                }`}
+              >
+                Todas ({acionamentos.length})
+              </button>
+              {uniqueEquipes.map((eq) => {
+                const count = acionamentos.filter((a) => a.equipe === eq).length;
+                return (
+                  <button
+                    key={eq}
+                    type="button"
+                    onClick={() => setSelectedEquipeFilter(eq)}
+                    className={`h-7 rounded px-2.5 text-xs font-medium transition-colors cursor-pointer ${
+                      selectedEquipeFilter === eq
+                        ? 'bg-primary text-primary-foreground font-semibold shadow-xs'
+                        : 'bg-background border border-border text-muted-foreground hover:text-foreground'
+                    }`}
+                  >
+                    {eq} ({count})
+                  </button>
+                );
+              })}
+            </div>
+          )}
         </div>
       )}
 
@@ -411,7 +533,7 @@ export const AcionamentosView: React.FC<AcionamentosViewProps> = ({
                   <div className="mb-3.5 flex items-center justify-between rounded-md bg-amber-500/15 border border-amber-500/30 px-3 py-1.5 text-xs font-semibold text-amber-300">
                     <span className="flex items-center gap-1.5">
                       <Clock className="size-3.5 animate-spin text-amber-400" />
-                      NOVA DEMANDA DE VISTORIA — AGUARDANDO SEU ACEITE
+                      NOVA DEMANDA ({getTipoAcionamento(item)}) — AGUARDANDO SEU ACEITE
                     </span>
                     <span className="text-[10px] font-mono text-amber-400">
                       Demandado por: {item.demandadoPorNome || 'Sistema Telecom'}
@@ -425,6 +547,8 @@ export const AcionamentosView: React.FC<AcionamentosViewProps> = ({
                       <span className="font-mono font-bold text-xs text-primary px-2 py-0.5 rounded bg-primary/10 border border-primary/20">
                         {protocolDisplay}
                       </span>
+                      {/* 5) Em cada card, mostre uma etiqueta clara: "VISTORIA" (azul) ou "EXECUTOR" (laranja) */}
+                      <TipoBadge tipoOrItem={item} />
                       <span className="font-bold text-base text-foreground">
                         {siteNameDisplay}
                       </span>
@@ -499,12 +623,15 @@ export const AcionamentosView: React.FC<AcionamentosViewProps> = ({
                     )}
 
                     {/* Details if Recusado */}
-                    {isRecusado && item.motivoRecusa && (
-                      <div className="rounded-lg border border-destructive/30 bg-destructive/10 p-2.5 text-xs text-destructive leading-relaxed">
-                        <span className="font-bold">Motivo da Recusa: </span>
-                        {item.motivoRecusa}
-                        <div className="mt-1 text-[11px] opacity-80">
-                          Recusado por: {item.recusadoPorNome || item.recusadoPorEmail} em {formatDateTime(item.recusadoEm)}
+                    {isRecusado && (
+                      <div className="rounded-lg border border-destructive/30 bg-destructive/10 p-2.5 text-xs text-destructive leading-relaxed space-y-1">
+                        <div>
+                          <span className="font-bold">Motivo da Recusa: </span>
+                          <span>{item.motivoRecusa || 'Motivo não informado.'}</span>
+                        </div>
+                        <div className="text-[11px] opacity-80">
+                          Recusado por: {item.recusadoPorNome || item.recusadoPorEmail || 'Vistoriador'}
+                          {item.recusadoEm ? ` em ${formatDateTime(item.recusadoEm)}` : ''}
                         </div>
                       </div>
                     )}
@@ -559,8 +686,9 @@ export const AcionamentosView: React.FC<AcionamentosViewProps> = ({
                               try {
                                 await onUpdateStatusWithPayload(item.id, newStatus);
                                 onToast?.(`Status alterado para "${newStatus}" com sucesso!`);
-                              } catch (err) {
-                                onToast?.('Erro ao alterar status.');
+                              } catch (err: any) {
+                                const errCode = err?.code || err?.message || 'erro';
+                                onToast?.(`Erro ao alterar status: ${errCode}`);
                               }
                             }}
                             className="rounded-md border border-input bg-background px-2.5 py-1 text-xs font-bold text-foreground cursor-pointer focus:outline-none focus:ring-1 focus:ring-primary"
@@ -659,7 +787,14 @@ export const AcionamentosView: React.FC<AcionamentosViewProps> = ({
                         <button
                           type="button"
                           disabled={actionLoading}
-                          onClick={() => onUpdateStatusWithPayload(item.id, 'Em deslocamento')}
+                          onClick={async () => {
+                            try {
+                              await onUpdateStatusWithPayload(item.id, 'Em deslocamento');
+                            } catch (err: any) {
+                              const errCode = err?.code || err?.message || 'erro';
+                              onToast?.(`Erro ao iniciar deslocamento: ${errCode}`);
+                            }
+                          }}
                           className="inline-flex h-8 items-center gap-1 rounded bg-primary hover:bg-primary/90 text-primary-foreground px-3 text-xs font-medium cursor-pointer shadow-xs"
                         >
                           <Navigation className="size-3.5" />
@@ -688,7 +823,14 @@ export const AcionamentosView: React.FC<AcionamentosViewProps> = ({
                         <button
                           type="button"
                           disabled={actionLoading}
-                          onClick={() => onUpdateStatusWithPayload(item.id, 'Em atendimento')}
+                          onClick={async () => {
+                            try {
+                              await onUpdateStatusWithPayload(item.id, 'Em atendimento');
+                            } catch (err: any) {
+                              const errCode = err?.code || err?.message || 'erro';
+                              onToast?.(`Erro ao iniciar atendimento: ${errCode}`);
+                            }
+                          }}
                           className="inline-flex h-8 items-center gap-1 rounded bg-emerald-600 hover:bg-emerald-500 text-white px-3 text-xs font-medium cursor-pointer"
                         >
                           <HardHat className="size-3.5" />
@@ -702,7 +844,14 @@ export const AcionamentosView: React.FC<AcionamentosViewProps> = ({
                           <button
                             type="button"
                             disabled={actionLoading}
-                            onClick={() => onUpdateStatusWithPayload(item.id, 'Pausado')}
+                            onClick={async () => {
+                              try {
+                                await onUpdateStatusWithPayload(item.id, 'Pausado');
+                              } catch (err: any) {
+                                const errCode = err?.code || err?.message || 'erro';
+                                onToast?.(`Erro ao pausar atendimento: ${errCode}`);
+                              }
+                            }}
                             className="inline-flex h-8 items-center gap-1 rounded border border-border bg-sidebar hover:bg-accent text-foreground px-2.5 text-xs font-medium cursor-pointer"
                           >
                             <Pause className="size-3 text-amber-400" />
@@ -729,7 +878,14 @@ export const AcionamentosView: React.FC<AcionamentosViewProps> = ({
                         <button
                           type="button"
                           disabled={actionLoading}
-                          onClick={() => onUpdateStatusWithPayload(item.id, 'Em atendimento')}
+                          onClick={async () => {
+                            try {
+                              await onUpdateStatusWithPayload(item.id, 'Em atendimento');
+                            } catch (err: any) {
+                              const errCode = err?.code || err?.message || 'erro';
+                              onToast?.(`Erro ao retomar atendimento: ${errCode}`);
+                            }
+                          }}
                           className="inline-flex h-8 items-center gap-1 rounded bg-primary hover:bg-primary/90 text-primary-foreground px-3 text-xs font-medium cursor-pointer"
                         >
                           <Play className="size-3.5" />

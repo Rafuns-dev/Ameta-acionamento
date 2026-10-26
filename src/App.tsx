@@ -12,6 +12,11 @@ import {
   NavSection,
 } from './types';
 import { formatDateTime, toDate } from './utils/dateUtils';
+import {
+  getTipoAcionamento,
+  getTipoUsuario,
+  matchesTipoUsuario,
+} from './utils/tipoAcionamento';
 import { Sidebar } from './components/Sidebar';
 import { Header } from './components/Header';
 import { DashboardHome } from './components/DashboardHome';
@@ -42,8 +47,8 @@ export default function App() {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
-  // Live Firestore Acionamentos
-  const [acionamentos, setAcionamentos] = useState<Acionamento[]>([]);
+  // Live Firestore Acionamentos (raw received from listener)
+  const [rawAcionamentos, setRawAcionamentos] = useState<Acionamento[]>([]);
   const [isLoadingFirestore, setIsLoadingFirestore] = useState(false);
   const [acionamentosError, setAcionamentosError] = useState<string | null>(null);
 
@@ -153,6 +158,8 @@ export default function App() {
           (initialsParts[1]?.charAt(0) || '')
         ).toUpperCase() || 'AM';
 
+        const tipoUsuario = getTipoUsuario(role, isCoord);
+
         const userFromAuth: AuthUser = {
           id: uid,
           email: fbUser.email,
@@ -160,6 +167,7 @@ export default function App() {
           fullName,
           initials,
           isCoord,
+          tipoUsuario,
           name,
           role,
           situacao,
@@ -169,8 +177,8 @@ export default function App() {
           assignedPlatform,
           equipe,
           roleBadge: role || (isCoord ? 'Coordenação' : undefined),
-          roleLabel: role || (isCoord ? 'Coordenação' : 'Vistoriador'),
-          avatarColor: isCoord ? 'bg-amber-600' : 'bg-emerald-600',
+          roleLabel: role || (isCoord ? 'Coordenação' : tipoUsuario === 'EXECUTOR' ? 'Executor' : 'Vistoriador'),
+          avatarColor: isCoord ? 'bg-amber-600' : tipoUsuario === 'EXECUTOR' ? 'bg-orange-600' : 'bg-emerald-600',
         };
         setCurrentUser(userFromAuth);
       } else {
@@ -184,6 +192,12 @@ export default function App() {
     return () => unsubscribe();
   }, []);
 
+  // 3) Aplique o filtro em TODOS os lugares que usam a lista de acionamentos
+  const userTipo = currentUser?.tipoUsuario || 'VISTORIA';
+  const acionamentos = React.useMemo(() => {
+    return rawAcionamentos.filter((item) => matchesTipoUsuario(item, userTipo));
+  }, [rawAcionamentos, userTipo]);
+
   // 4) O listener de "acionamentos" usa o isCoord do usuário (calculado a partir do cadastro):
   // coordenação ouve a coleção inteira; qualquer outro perfil ouve apenas com where('destinatariosEmails', 'array-contains', email em minúsculas).
   // Não recalcule isCoord pelo e-mail no listener.
@@ -192,7 +206,7 @@ export default function App() {
 
     // Se não há usuário logado ou o acesso está bloqueado, não carrega acionamentos!
     if (!currentUser?.email || accessBlocked) {
-      setAcionamentos([]);
+      setRawAcionamentos([]);
       setIsLoadingFirestore(false);
       return;
     }
@@ -294,17 +308,20 @@ export default function App() {
           return dateB - dateA;
         });
 
-        // Alert user if new pending items in 'Aguardando aceite' arrive and create real notification
-        const currentPending = loaded.filter((item) => item.status === 'Aguardando aceite');
-        const currentPendingIds = new Set(currentPending.map((item) => item.id));
+        // Alert user if new pending items in 'Aguardando aceite' arrive (filtered by tipoUsuario)
+        const matchingPending = loaded
+          .filter((item) => matchesTipoUsuario(item, userTipo))
+          .filter((item) => item.status === 'Aguardando aceite');
+        const currentPendingIds = new Set(matchingPending.map((item) => item.id));
 
-        const newlyAdded = currentPending.filter((item) => !previousPendingIds.has(item.id));
+        const newlyAdded = matchingPending.filter((item) => !previousPendingIds.has(item.id));
         if (newlyAdded.length > 0 && previousPendingIds.size > 0) {
           const item = newlyAdded[0];
-          showToast(`NOVA VISTORIA DEMANDADA! Protocolo ${item.protocolo} no Site ${item.siteId}`);
+          const itemTipo = getTipoAcionamento(item);
+          showToast(`NOVA DEMANDA (${itemTipo})! Protocolo ${item.protocolo} no Site ${item.siteId}`);
           const newNotif: AppNotification = {
             id: `notif-${Date.now()}-${item.id}`,
-            title: 'Nova Vistoria Demandada',
+            title: `Nova Demanda (${itemTipo})`,
             detail: `Protocolo ${item.protocolo} no Site ${item.siteId}`,
             time: formatDateTime(new Date()),
             read: false,
@@ -314,7 +331,7 @@ export default function App() {
         }
 
         previousPendingIds = currentPendingIds;
-        setAcionamentos(loaded);
+        setRawAcionamentos(loaded);
         setIsLoadingFirestore(false);
       },
       (err: any) => {
@@ -331,7 +348,7 @@ export default function App() {
     );
 
     return () => unsubscribe();
-  }, [currentUser?.email, currentUser?.isCoord, accessBlocked]);
+  }, [currentUser?.email, currentUser?.isCoord, userTipo, accessBlocked]);
 
   const handleLogout = async () => {
     try {
@@ -345,11 +362,13 @@ export default function App() {
     showToast('Sessão encerrada com sucesso.');
   };
 
-  // Update status in Firestore
+  // Update status in Firestore with optimistic update
   const handleUpdateStatusWithPayload = async (
     docId: string,
     newStatus: AcionamentoStatus,
     extraFields?: {
+      aceitoEm?: string;
+      recusadoEm?: string;
       motivoRecusa?: string;
       checkinEm?: string;
       checkinLocal?: string;
@@ -361,20 +380,58 @@ export default function App() {
     }
   ) => {
     if (!currentUser) return;
-    const targetItem = acionamentos.find((a) => a.id === docId);
+    const targetItem = rawAcionamentos.find((a) => a.id === docId);
     if (!targetItem) return;
 
-    await updateAcionamentoStatusInFirestore({
-      docId,
-      status: newStatus,
-      userEmail: currentUser.email.toLowerCase(),
-      userName: currentUser.name || currentUser.fullName || currentUser.shortName,
-      vendor: targetItem.vendor,
-      isCoord: currentUser.isCoord,
-      existingDestinatariosEmails: targetItem.destinatariosEmails || [],
-      existingHistorico: targetItem.historico || [],
-      ...extraFields,
-    });
+    const previousAcionamentos = [...rawAcionamentos];
+    const nowIso = new Date().toISOString();
+    const updatedEmail = currentUser.email.toLowerCase();
+    const updatedName = currentUser.name || currentUser.fullName || currentUser.shortName;
+
+    // Optimistically update rawAcionamentos state so UI reflects immediately
+    setRawAcionamentos((prev) =>
+      prev.map((item) => {
+        if (item.id !== docId) return item;
+        return {
+          ...item,
+          status: newStatus,
+          atualizadoEm: nowIso,
+          ...(newStatus === 'Aceito'
+            ? { aceitoPorEmail: updatedEmail, aceitoPorNome: updatedName, aceitoEm: nowIso }
+            : {}),
+          ...(newStatus === 'Recusado'
+            ? {
+                recusadoPorEmail: updatedEmail,
+                recusadoPorNome: updatedName,
+                recusadoEm: extraFields?.recusadoEm || nowIso,
+                motivoRecusa: extraFields?.motivoRecusa,
+              }
+            : {}),
+          ...(extraFields?.checkinEm ? { checkinEm: extraFields.checkinEm } : {}),
+          ...(extraFields?.checkinLocal ? { checkinLocal: extraFields.checkinLocal } : {}),
+          ...(extraFields?.checkoutEm ? { checkoutEm: extraFields.checkoutEm } : {}),
+          ...(extraFields?.checkoutLocal ? { checkoutLocal: extraFields.checkoutLocal } : {}),
+          ...(extraFields?.concluidoEm ? { concluidoEm: extraFields.concluidoEm } : {}),
+          ...(extraFields?.resumoConclusao ? { resumoConclusao: extraFields.resumoConclusao } : {}),
+          ...(extraFields?.pendencias ? { pendencias: extraFields.pendencias } : {}),
+        };
+      })
+    );
+
+    try {
+      await updateAcionamentoStatusInFirestore({
+        docId,
+        status: newStatus,
+        userEmail: updatedEmail,
+        userName: updatedName,
+        existingHistorico: targetItem.historico || [],
+        ...extraFields,
+      });
+    } catch (err) {
+      // Revert optimistic update if write failed
+      setRawAcionamentos(previousAcionamentos);
+      throw err;
+    }
   };
 
   if (authChecking) {
@@ -469,7 +526,10 @@ export default function App() {
           onClose={() => setDiagnosticsModalOpen(false)}
           currentUser={currentUser}
           userDocData={userDocData}
-          acionamentosCount={acionamentos.length}
+          tipoUsuario={currentUser?.tipoUsuario}
+          acionamentosCount={rawAcionamentos.length}
+          countVistoria={rawAcionamentos.filter((a) => getTipoAcionamento(a) === 'VISTORIA').length}
+          countExecutor={rawAcionamentos.filter((a) => getTipoAcionamento(a) === 'EXECUTOR').length}
           acionamentosError={acionamentosError}
           onToast={showToast}
         />
@@ -611,7 +671,10 @@ export default function App() {
         onClose={() => setDiagnosticsModalOpen(false)}
         currentUser={currentUser}
         userDocData={userDocData}
-        acionamentosCount={acionamentos.length}
+        tipoUsuario={currentUser?.tipoUsuario}
+        acionamentosCount={rawAcionamentos.length}
+        countVistoria={rawAcionamentos.filter((a) => getTipoAcionamento(a) === 'VISTORIA').length}
+        countExecutor={rawAcionamentos.filter((a) => getTipoAcionamento(a) === 'EXECUTOR').length}
         acionamentosError={acionamentosError}
         onToast={showToast}
       />

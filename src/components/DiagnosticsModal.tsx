@@ -22,6 +22,9 @@ interface DiagnosticsModalProps {
   currentUser: AuthUser | null;
   userDocData: UserDocDiagnosticData | null;
   acionamentosCount: number;
+  countVistoria?: number;
+  countExecutor?: number;
+  tipoUsuario?: string;
   acionamentosError: string | null;
   onToast?: (msg: string) => void;
 }
@@ -32,6 +35,9 @@ export const DiagnosticsModal: React.FC<DiagnosticsModalProps> = ({
   currentUser,
   userDocData,
   acionamentosCount,
+  countVistoria = 0,
+  countExecutor = 0,
+  tipoUsuario,
   acionamentosError,
   onToast,
 }) => {
@@ -44,6 +50,7 @@ export const DiagnosticsModal: React.FC<DiagnosticsModalProps> = ({
     const email = currentUser?.email || 'N/A';
     const uid = currentUser?.id || 'N/A';
     const isCoord = currentUser?.isCoord ? 'true' : 'false';
+    const userTipoResolved = tipoUsuario || currentUser?.tipoUsuario || 'N/A';
 
     let docStatus = 'Não carregado';
     if (userDocData?.error) {
@@ -67,7 +74,7 @@ export const DiagnosticsModal: React.FC<DiagnosticsModalProps> = ({
 
     const acionamentosStatus = acionamentosError
       ? `ERRO: ${acionamentosError}`
-      : `${acionamentosCount} acionamento(s) recebido(s)`;
+      : `${acionamentosCount} acionamento(s) recebido(s) (VISTORIA: ${countVistoria} | EXECUTOR: ${countExecutor})`;
 
     return [
       '=== DIAGNÓSTICO DO USUÁRIO & SISTEMA ===',
@@ -78,7 +85,10 @@ export const DiagnosticsModal: React.FC<DiagnosticsModalProps> = ({
       `Campos lidos de usuarios:`,
       `  ${fields}`,
       `isCoord: ${isCoord}`,
+      `tipoUsuario: ${userTipoResolved}`,
       `Acionamentos no Listener: ${acionamentosStatus}`,
+      `  - VISTORIA: ${countVistoria}`,
+      `  - EXECUTOR: ${countExecutor}`,
       '========================================',
     ].join('\n');
   };
@@ -216,21 +226,44 @@ export const DiagnosticsModal: React.FC<DiagnosticsModalProps> = ({
                   : 'bg-muted text-muted-foreground border border-border'
               }`}
             >
-              {currentUser?.isCoord ? 'true (Coordenação)' : 'false (Vistoriador / Campo)'}
+              {currentUser?.isCoord ? 'true (Coordenação)' : 'false (Campo)'}
+            </span>
+          </div>
+
+          {/* Tipo do Usuário */}
+          <div className="rounded-lg border border-border bg-background/60 p-3 flex items-center justify-between text-xs">
+            <span className="font-semibold text-foreground">Tipo do Usuário (tipoUsuario):</span>
+            <span className="px-2.5 py-1 rounded font-bold text-xs bg-primary/15 text-primary border border-primary/30">
+              {tipoUsuario || currentUser?.tipoUsuario || 'N/A'}
             </span>
           </div>
 
           {/* Acionamentos count / error */}
-          <div className="rounded-lg border border-border bg-background/60 p-3 flex items-center justify-between text-xs">
-            <span className="font-semibold text-foreground">Vistorias no Listener:</span>
-            {acionamentosError ? (
-              <span className="text-destructive font-mono text-[11px] text-right truncate max-w-[200px]" title={acionamentosError}>
-                Erro: {acionamentosError}
-              </span>
-            ) : (
-              <span className="font-mono font-bold text-foreground">
-                {acionamentosCount} acionamento(s)
-              </span>
+          <div className="rounded-lg border border-border bg-background/60 p-3 space-y-2 text-xs">
+            <div className="flex items-center justify-between">
+              <span className="font-semibold text-foreground">Acionamentos no Listener:</span>
+              {acionamentosError ? (
+                <span className="text-destructive font-mono text-[11px] text-right truncate max-w-[200px]" title={acionamentosError}>
+                  Erro: {acionamentosError}
+                </span>
+              ) : (
+                <span className="font-mono font-bold text-foreground">
+                  {acionamentosCount} total recebido(s)
+                </span>
+              )}
+            </div>
+
+            {!acionamentosError && (
+              <div className="grid grid-cols-2 gap-2 pt-1.5 border-t border-border/60">
+                <div className="rounded border border-blue-500/30 bg-blue-500/10 p-2 text-center">
+                  <span className="block text-[10px] uppercase font-bold text-blue-400">Vistoria</span>
+                  <span className="font-mono font-extrabold text-sm text-blue-300">{countVistoria}</span>
+                </div>
+                <div className="rounded border border-orange-500/30 bg-orange-500/10 p-2 text-center">
+                  <span className="block text-[10px] uppercase font-bold text-orange-400">Executor</span>
+                  <span className="font-mono font-extrabold text-sm text-orange-300">{countExecutor}</span>
+                </div>
+              </div>
             )}
           </div>
         </div>

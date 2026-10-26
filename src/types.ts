@@ -162,6 +162,7 @@ export interface AuthUser {
   base?: string;
   initials?: string;
   avatarColor?: string;
+  tipoUsuario?: 'VISTORIA' | 'EXECUTOR' | 'AMBOS' | 'TODOS';
   specialties?: string[];
   phone?: string;
 }
