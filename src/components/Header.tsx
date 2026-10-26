@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Bell, CheckCheck, LogOut, Menu, Moon, Sun, UserCheck } from 'lucide-react';
+import { Activity, Bell, CheckCheck, LogOut, Menu, Moon, Sun, UserCheck } from 'lucide-react';
 import { AppNotification, AuthUser, NavSection } from '../types';
 
 interface HeaderProps {
@@ -12,6 +12,7 @@ interface HeaderProps {
   notifications: AppNotification[];
   onMarkAllNotificationsRead: () => void;
   onNavigate: (section: NavSection) => void;
+  onOpenDiagnostics: () => void;
 }
 
 const SECTION_TITLES: Record<NavSection, string> = {
@@ -30,6 +31,7 @@ export const Header: React.FC<HeaderProps> = ({
   notifications,
   onMarkAllNotificationsRead,
   onNavigate,
+  onOpenDiagnostics,
 }) => {
   const [notifOpen, setNotifOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
@@ -179,13 +181,11 @@ export const Header: React.FC<HeaderProps> = ({
           </span>
           <div className="hidden text-left sm:block">
             <p className="text-xs font-semibold leading-tight text-foreground truncate max-w-[130px]">
-              {user.shortName}
+              {user.name || user.fullName || user.shortName}
             </p>
-            {user.roleLabel && (
-              <p className="text-[10px] leading-tight text-muted-foreground truncate max-w-[130px]">
-                {user.roleLabel}
-              </p>
-            )}
+            <p className="text-[10px] leading-tight text-muted-foreground truncate max-w-[130px]">
+              {user.role || (user.isCoord ? 'Coordenação' : user.roleLabel || 'Usuário')}
+            </p>
           </div>
         </button>
 
@@ -198,15 +198,16 @@ export const Header: React.FC<HeaderProps> = ({
                 </span>
                 <div className="min-w-0">
                   <p className="text-xs font-semibold text-foreground truncate">
-                    {user.fullName}
+                    {user.name || user.fullName}
                   </p>
                   <p className="text-[11px] text-muted-foreground truncate">
                     {user.email}
                   </p>
                 </div>
               </div>
-              <p className="mt-1 text-[11px] text-muted-foreground">
-                {[user.roleBadge, user.company, user.registration].filter(Boolean).join(' · ')}
+              <p className="mt-1 text-[11px] text-muted-foreground font-medium">
+                {user.role ? `Cargo: ${user.role}` : (user.isCoord ? 'Coordenação' : 'Sem cargo')}
+                {user.equipe ? ` · ${user.equipe}` : ''}
               </p>
             </div>
 
@@ -221,6 +222,18 @@ export const Header: React.FC<HeaderProps> = ({
               >
                 <UserCheck className="size-3.5 text-primary" />
                 <span>Meus acionamentos</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  setProfileOpen(false);
+                  onOpenDiagnostics();
+                }}
+                className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-xs text-foreground hover:bg-accent cursor-pointer whitespace-nowrap"
+              >
+                <Activity className="size-3.5 text-primary" />
+                <span>Diagnóstico do Sistema</span>
               </button>
 
               {/* Logout button */}

@@ -8,6 +8,7 @@ export interface UpdateAcionamentoParams {
   userEmail: string;
   userName: string;
   vendor?: string;
+  isCoord?: boolean;
   existingDestinatariosEmails?: string[];
   existingHistorico?: AcionamentoHistoryItem[];
 
@@ -39,6 +40,7 @@ export async function updateAcionamentoStatusInFirestore(params: UpdateAcionamen
     userEmail,
     userName,
     vendor,
+    isCoord = false,
     existingDestinatariosEmails = [],
     existingHistorico = [],
     aceitoEm,
@@ -93,8 +95,6 @@ export async function updateAcionamentoStatusInFirestore(params: UpdateAcionamen
   }
 
   const emailLower = userEmail.toLowerCase();
-  const isCoord = emailLower.includes('coord') || emailLower.includes('admin') || emailLower.includes('gerente') || emailLower.includes('gestao') || emailLower.includes('dono') || emailLower.includes('operacao') || emailLower.includes('telecom') || emailLower.includes('ameta');
-
   if (isCoord && existingDestinatariosEmails && !existingDestinatariosEmails.includes(emailLower)) {
     payload.destinatariosEmails = [...existingDestinatariosEmails, emailLower];
   }

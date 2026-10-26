@@ -79,7 +79,7 @@ export const AcionamentosView: React.FC<AcionamentosViewProps> = ({
 
   const [actionLoading, setActionLoading] = useState(false);
 
-  const isCoord = currentUser?.isCoord === true || (currentUser?.email || '').toLowerCase().includes('coord') || (currentUser?.email || '').toLowerCase().includes('admin') || (currentUser?.email || '').toLowerCase().includes('gerente') || (currentUser?.email || '').toLowerCase().includes('gestao') || (currentUser?.email || '').toLowerCase().includes('dono') || (currentUser?.email || '').toLowerCase().includes('operacao');
+  const isCoord = Boolean(currentUser?.isCoord);
 
   const [selectedEquipeFilter, setSelectedEquipeFilter] = useState<string>('todas');
   const uniqueEquipes = Array.from(
