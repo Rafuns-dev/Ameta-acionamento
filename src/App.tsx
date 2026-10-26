@@ -16,6 +16,7 @@ import {
   getTipoAcionamento,
   getTipoUsuario,
   matchesTipoUsuario,
+  rotuloAtividade,
 } from './utils/tipoAcionamento';
 import { Sidebar } from './components/Sidebar';
 import { Header } from './components/Header';
@@ -317,11 +318,11 @@ export default function App() {
         const newlyAdded = matchingPending.filter((item) => !previousPendingIds.has(item.id));
         if (newlyAdded.length > 0 && previousPendingIds.size > 0) {
           const item = newlyAdded[0];
-          const itemTipo = getTipoAcionamento(item);
-          showToast(`NOVA DEMANDA (${itemTipo})! Protocolo ${item.protocolo} no Site ${item.siteId}`);
+          const itemRotulo = rotuloAtividade(item);
+          showToast(`NOVA DEMANDA (${itemRotulo.toUpperCase()})! Protocolo ${item.protocolo} no Site ${item.siteId}`);
           const newNotif: AppNotification = {
             id: `notif-${Date.now()}-${item.id}`,
-            title: `Nova Demanda (${itemTipo})`,
+            title: `Nova Demanda (${itemRotulo})`,
             detail: `Protocolo ${item.protocolo} no Site ${item.siteId}`,
             time: formatDateTime(new Date()),
             read: false,
@@ -342,7 +343,7 @@ export default function App() {
         if (err?.code === 'permission-denied') {
           showToast('Sem permissão para ler os acionamentos');
         } else {
-          showToast('Não foi possível carregar suas vistorias. Fale com a coordenação.');
+          showToast('Não foi possível carregar seus acionamentos. Fale com a coordenação.');
         }
       }
     );

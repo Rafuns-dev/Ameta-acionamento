@@ -13,7 +13,7 @@ import {
 } from 'lucide-react';
 import { Acionamento, AcionamentoStatus } from '../types';
 import { formatDateTime, toDate } from '../utils/dateUtils';
-import { TipoBadge } from '../utils/tipoAcionamento';
+import { getTipoAcionamento, rotuloAtividade, TipoBadge } from '../utils/tipoAcionamento';
 
 interface AgendaViewProps {
   acionamentos: Acionamento[];
@@ -58,6 +58,15 @@ export const AgendaView: React.FC<AgendaViewProps> = ({
     );
   });
 
+  const hasAnyExecutor = acionamentos.some((a) => getTipoAcionamento(a) === 'EXECUTOR');
+  const hasAnyVistoria = acionamentos.some((a) => getTipoAcionamento(a) === 'VISTORIA');
+  const pageTitle =
+    hasAnyExecutor && !hasAnyVistoria
+      ? 'Meus projetos do dia'
+      : !hasAnyExecutor && hasAnyVistoria
+      ? 'Minhas vistorias do dia'
+      : 'Minhas demandas do dia';
+
   return (
     <div className="space-y-5">
       {/* Header */}
@@ -66,11 +75,11 @@ export const AgendaView: React.FC<AgendaViewProps> = ({
           <div className="flex items-center gap-2">
             <CalendarDays className="size-5 text-primary" />
             <h1 className="text-xl font-semibold text-foreground">
-              Minhas vistorias do dia
+              {pageTitle}
             </h1>
           </div>
           <p className="mt-1 text-sm text-muted-foreground">
-            Vistorias aceitas e em andamento atribuídas à sua conta em tempo real.
+            Demandas aceitas e em andamento atribuídas à sua conta em tempo real.
           </p>
         </div>
 
@@ -100,17 +109,17 @@ export const AgendaView: React.FC<AgendaViewProps> = ({
         </div>
 
         <div className="text-xs font-medium text-muted-foreground">
-          Total de vistorias ativas: <strong className="text-foreground">{vistoriasDoDia.length}</strong>
+          Total de demandas ativas: <strong className="text-foreground">{vistoriasDoDia.length}</strong>
         </div>
       </div>
 
-      {/* Vistorias list */}
+      {/* Demands list */}
       <div className="space-y-3">
         {filtered.length === 0 ? (
           <div className="rounded-md border border-border p-8 text-center text-sm text-muted-foreground">
             {search
-              ? 'Nenhuma vistoria encontrada com o termo pesquisado.'
-              : 'Nenhuma vistoria ativa em andamento no momento.'}
+              ? 'Nenhuma demanda encontrada com o termo pesquisado.'
+              : 'Nenhuma demanda ativa em andamento no momento.'}
           </div>
         ) : (
           filtered.map((item) => {
@@ -200,7 +209,7 @@ export const AgendaView: React.FC<AgendaViewProps> = ({
                       className="inline-flex h-8 items-center gap-1 rounded bg-emerald-600 hover:bg-emerald-500 text-white px-3 text-xs font-semibold cursor-pointer"
                     >
                       <HardHat className="size-3.5" />
-                      <span>Iniciar Vistoria</span>
+                      <span>Iniciar {rotuloAtividade(item)}</span>
                     </button>
                   )}
 

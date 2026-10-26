@@ -21,7 +21,7 @@ import {
   NavSection,
 } from '../types';
 import { formatDateTime, toDate } from '../utils/dateUtils';
-import { TipoBadge } from '../utils/tipoAcionamento';
+import { rotuloAtividade, rotuloAtividadeDe, TipoBadge } from '../utils/tipoAcionamento';
 
 interface DashboardHomeProps {
   currentUser: AuthUser;
@@ -107,11 +107,17 @@ export const DashboardHome: React.FC<DashboardHomeProps> = ({
               </span>
             )}
             <span className="inline-flex items-center rounded-md bg-secondary px-2 py-0.5 text-xs font-medium text-secondary-foreground">
-              Vistorias em Campo
+              {user.tipoUsuario === 'EXECUTOR'
+                ? 'Projetos em Campo'
+                : user.tipoUsuario === 'VISTORIA'
+                ? 'Vistorias em Campo'
+                : 'Operações em Campo'}
             </span>
           </div>
           <p className="mt-1 max-w-2xl break-words text-sm text-muted-foreground">
-            Painel de Vistorias e Operações de Campo Ameta Telecom.
+            {user.tipoUsuario === 'EXECUTOR'
+              ? 'Painel de Projetos e Operações de Campo Ameta Telecom.'
+              : 'Painel de Vistorias e Operações de Campo Ameta Telecom.'}
           </p>
         </div>
 
@@ -198,7 +204,11 @@ export const DashboardHome: React.FC<DashboardHomeProps> = ({
                 {concluidosCount}
               </span>
               <span className="text-xs text-emerald-400 font-medium">
-                Vistorias finalizadas
+                {user.tipoUsuario === 'EXECUTOR'
+                  ? 'Projetos finalizados'
+                  : user.tipoUsuario === 'VISTORIA'
+                  ? 'Vistorias finalizadas'
+                  : 'Demandas finalizadas'}
               </span>
             </div>
           </button>
@@ -264,7 +274,7 @@ export const DashboardHome: React.FC<DashboardHomeProps> = ({
             <Radio className="size-4 text-amber-400 animate-pulse" />
             <h2 className="text-sm font-semibold text-foreground">
               {oldestPendingItem
-                ? 'Destaque: Demanda Mais Antiga Aguardando Aceite'
+                ? `Destaque: ${rotuloAtividade(oldestPendingItem)} Mais Antig${rotuloAtividade(oldestPendingItem) === 'Projeto' ? 'o' : 'a'} Aguardando Aceite`
                 : 'Destaque de Acionamento Ativo'}
             </h2>
           </div>
@@ -375,9 +385,11 @@ export const DashboardHome: React.FC<DashboardHomeProps> = ({
                   <button
                     type="button"
                     onClick={async () => {
+                      const label = rotuloAtividade(activeSite);
+                      const isProj = label === 'Projeto';
                       try {
                         await onUpdateAcionamentoStatus(activeSite.id, 'Aceito');
-                        onToast?.(`Vistoria no site ${activeSite.siteId} aceita com sucesso!`);
+                        onToast?.(`${label} no site ${activeSite.siteId} aceit${isProj ? 'o' : 'a'} com sucesso!`);
                       } catch (err: any) {
                         const errCode = err?.code || err?.message || 'erro';
                         onToast?.(`Erro ao aceitar demanda: ${errCode}`);
@@ -386,7 +398,7 @@ export const DashboardHome: React.FC<DashboardHomeProps> = ({
                     className="inline-flex h-8 items-center gap-1.5 rounded-md bg-emerald-600 hover:bg-emerald-500 text-white px-3.5 text-xs font-semibold cursor-pointer shadow-xs transition-colors"
                   >
                     <UserCheck className="size-3.5" />
-                    <span>Aceitar Vistoria</span>
+                    <span>Aceitar {rotuloAtividade(activeSite)}</span>
                   </button>
                   <button
                     type="button"
@@ -474,7 +486,9 @@ export const DashboardHome: React.FC<DashboardHomeProps> = ({
           </div>
         ) : (
           <p className="mt-3 text-sm text-muted-foreground">
-            Nenhuma vistoria demandada no momento.
+            {user.tipoUsuario === 'EXECUTOR'
+              ? 'Nenhum projeto demandado no momento.'
+              : 'Nenhuma vistoria demandada no momento.'}
           </p>
         )}
       </section>

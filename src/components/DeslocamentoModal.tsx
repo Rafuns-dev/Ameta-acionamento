@@ -13,6 +13,7 @@ import {
   X,
 } from 'lucide-react';
 import { Acionamento, DisplacementInfo } from '../types';
+import { rotuloAtividade, rotuloAtividadeDe } from '../utils/tipoAcionamento';
 
 interface DeslocamentoModalProps {
   open: boolean;
@@ -58,7 +59,7 @@ export const DeslocamentoModal: React.FC<DeslocamentoModalProps> = ({
     origin: 'Origem da Rota',
     destination: currentSite?.endereco || currentSite?.address || currentSite?.siteNome || 'Site de Telecom',
     vehicle: 'Veículo da Equipe',
-    driver: currentSite?.aceitoPorNome || 'Vistoriador',
+    driver: currentSite?.aceitoPorNome || (rotuloAtividade(currentSite) === 'Projeto' ? 'Executor' : 'Vistoriador'),
     departureTime: 'Em trânsito',
     estimatedArrival: 'Em deslocamento',
     estimatedDistanceKm: 0,
@@ -358,7 +359,7 @@ export const DeslocamentoModal: React.FC<DeslocamentoModalProps> = ({
               {(currentSite.observacao || currentSite.problemDescription) && (
                 <div className="rounded-md border border-border bg-background p-3 text-xs space-y-1">
                   <span className="font-semibold text-foreground">
-                    Escopo da Vistoria:
+                    Escopo {rotuloAtividadeDe(currentSite)}:
                   </span>
                   <p className="text-muted-foreground leading-relaxed">
                     {currentSite.observacao || currentSite.problemDescription}

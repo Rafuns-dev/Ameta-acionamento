@@ -69,10 +69,29 @@ export const Header: React.FC<HeaderProps> = ({
       {/* Page Title & Subtitle */}
       <div className="min-w-0 flex-1">
         <p className="truncate text-sm font-semibold text-foreground">
-          {SECTION_TITLES[activeSection]}
+          {activeSection === NavSection.ACIONAMENTOS
+            ? user.tipoUsuario === 'EXECUTOR'
+              ? 'Projetos em Sites & Torres'
+              : user.tipoUsuario === 'VISTORIA'
+              ? 'Vistorias em Sites & Torres'
+              : 'Demandas em Sites & Torres'
+            : activeSection === NavSection.AGENDA
+            ? user.tipoUsuario === 'EXECUTOR'
+              ? 'Meus projetos do dia'
+              : user.tipoUsuario === 'VISTORIA'
+              ? 'Minhas vistorias do dia'
+              : 'Minhas demandas do dia'
+            : 'Início'}
         </p>
         <div className="flex items-center gap-2 text-[11px] text-muted-foreground truncate">
-          <span>Ameta Telecom · Vistorias de Campo</span>
+          <span>
+            Ameta Telecom ·{' '}
+            {user.tipoUsuario === 'EXECUTOR'
+              ? 'Projetos em Campo'
+              : user.tipoUsuario === 'VISTORIA'
+              ? 'Vistorias em Campo'
+              : 'Operações em Campo'}
+          </span>
           <span className="hidden sm:inline">·</span>
           <span className="hidden sm:inline-flex items-center gap-1 text-emerald-400">
             <span className="size-1.5 rounded-full bg-emerald-400"></span>

@@ -91,3 +91,40 @@ export const TipoBadge: React.FC<{
     </span>
   );
 };
+
+/**
+ * 6) Retorna 'Projeto' para EXECUTOR e 'Vistoria' para VISTORIA.
+ */
+export function rotuloAtividade(
+  item: { tipoDestinatario?: string; id?: string } | null | undefined
+): 'Projeto' | 'Vistoria' {
+  return getTipoAcionamento(item) === 'EXECUTOR' ? 'Projeto' : 'Vistoria';
+}
+
+/**
+ * Retorna 'projeto' para EXECUTOR e 'vistoria' para VISTORIA.
+ */
+export function rotuloAtividadeLower(
+  item: { tipoDestinatario?: string; id?: string } | null | undefined
+): 'projeto' | 'vistoria' {
+  return getTipoAcionamento(item) === 'EXECUTOR' ? 'projeto' : 'vistoria';
+}
+
+/**
+ * Retorna 'do projeto' ou 'da vistoria'
+ */
+export function rotuloAtividadeDe(
+  item: { tipoDestinatario?: string; id?: string } | null | undefined
+): string {
+  return getTipoAcionamento(item) === 'EXECUTOR' ? 'do projeto' : 'da vistoria';
+}
+
+/**
+ * Retorna 'ao projeto' ou 'à vistoria'
+ */
+export function rotuloAtividadeA(
+  item: { tipoDestinatario?: string; id?: string } | null | undefined
+): string {
+  return getTipoAcionamento(item) === 'EXECUTOR' ? 'ao projeto' : 'à vistoria';
+}
+

@@ -27,7 +27,14 @@ import {
   AuthUser,
 } from '../types';
 import { formatDateTime } from '../utils/dateUtils';
-import { getTipoAcionamento, TipoBadge } from '../utils/tipoAcionamento';
+import {
+  getTipoAcionamento,
+  rotuloAtividade,
+  rotuloAtividadeA,
+  rotuloAtividadeDe,
+  rotuloAtividadeLower,
+  TipoBadge,
+} from '../utils/tipoAcionamento';
 
 interface AcionamentosViewProps {
   acionamentos: Acionamento[];
@@ -158,9 +165,11 @@ export const AcionamentosView: React.FC<AcionamentosViewProps> = ({
   // Actions
   const handleConfirmAceitar = async (item: Acionamento) => {
     setActionLoading(true);
+    const label = rotuloAtividade(item);
+    const isProj = label === 'Projeto';
     try {
       await onUpdateStatusWithPayload(item.id, 'Aceito');
-      onToast?.(`Vistoria no site ${item.siteId} aceita com sucesso!`);
+      onToast?.(`${label} do site ${item.siteId} aceit${isProj ? 'o' : 'a'} com sucesso!`);
     } catch (e: any) {
       const errCode = e?.code || e?.message || 'erro';
       onToast?.(`Erro ao aceitar demanda: ${errCode}`);
@@ -178,6 +187,8 @@ export const AcionamentosView: React.FC<AcionamentosViewProps> = ({
     }
 
     setActionLoading(true);
+    const label = rotuloAtividade(recusarItem);
+    const isProj = label === 'Projeto';
     try {
       const nowIso = new Date().toISOString();
       const targetSiteId = recusarItem.siteId;
@@ -185,7 +196,7 @@ export const AcionamentosView: React.FC<AcionamentosViewProps> = ({
         motivoRecusa: motivo,
         recusadoEm: nowIso,
       });
-      onToast?.(`Demanda do site ${targetSiteId} recusada.`);
+      onToast?.(`${label} do site ${targetSiteId} recusad${isProj ? 'o' : 'a'}.`);
       setRecusarItem(null);
       setMotivoRecusaInput('');
       // 4) Depois de recusar, o acionamento deve sair imediatamente da lista "Restantes" e aparecer em "Concluídos / Encerrados" com o motivo
@@ -201,13 +212,14 @@ export const AcionamentosView: React.FC<AcionamentosViewProps> = ({
   const handleConfirmCheckin = async () => {
     if (!checkinItem) return;
     setActionLoading(true);
+    const label = rotuloAtividade(checkinItem);
     try {
       const nowIso = new Date().toISOString();
       await onUpdateStatusWithPayload(checkinItem.id, 'No local', {
         checkinEm: nowIso,
         checkinLocal: checkinLocalInput.trim() || checkinItem.endereco || checkinItem.siteNome,
       });
-      onToast?.(`Check-in de chegada ao site ${checkinItem.siteId} confirmado!`);
+      onToast?.(`Check-in de chegada ao site ${checkinItem.siteId} (${label}) confirmado!`);
       setCheckinItem(null);
       setCheckinLocalInput('');
     } catch (e: any) {
@@ -220,8 +232,10 @@ export const AcionamentosView: React.FC<AcionamentosViewProps> = ({
 
   const handleConfirmConcluir = async () => {
     if (!concluirItem) return;
+    const label = rotuloAtividade(concluirItem);
+    const isProj = label === 'Projeto';
     if (!resumoConclusaoInput.trim()) {
-      onToast?.('Por favor, descreva o resumo da conclusão da vistoria.');
+      onToast?.(`Por favor, descreva o resumo da conclusão ${rotuloAtividadeDe(concluirItem)}.`);
       return;
     }
 
@@ -235,7 +249,7 @@ export const AcionamentosView: React.FC<AcionamentosViewProps> = ({
         resumoConclusao: resumoConclusaoInput.trim(),
         pendencias: pendenciasInput.trim() || 'Nenhuma pendência informada.',
       });
-      onToast?.(`Vistoria no site ${concluirItem.siteId} finalizada!`);
+      onToast?.(`${label} no site ${concluirItem.siteId} finalizad${isProj ? 'o' : 'a'}!`);
       setConcluirItem(null);
       setResumoConclusaoInput('');
       setPendenciasInput('');
@@ -248,6 +262,14 @@ export const AcionamentosView: React.FC<AcionamentosViewProps> = ({
     }
   };
 
+  const userTipo = currentUser?.tipoUsuario || 'VISTORIA';
+  const pageTitle =
+    userTipo === 'EXECUTOR'
+      ? 'Projetos em Sites de Telecom & Torres'
+      : userTipo === 'VISTORIA'
+      ? 'Vistorias em Sites de Telecom & Torres'
+      : 'Vistorias & Projetos em Sites & Torres';
+
   return (
     <div className="space-y-5">
       {/* View Header */}
@@ -256,7 +278,7 @@ export const AcionamentosView: React.FC<AcionamentosViewProps> = ({
           <div className="flex items-center gap-2">
             <Radio className="size-5 text-amber-400" />
             <h1 className="text-xl font-semibold text-foreground">
-              Vistorias em Sites de Telecom & Torres
+              {pageTitle}
             </h1>
             <span className="inline-flex items-center gap-1 rounded bg-emerald-500/15 px-2 py-0.5 text-[11px] font-semibold text-emerald-400 border border-emerald-500/30">
               <span className="size-1.5 rounded-full bg-emerald-400 animate-pulse" />
@@ -264,7 +286,7 @@ export const AcionamentosView: React.FC<AcionamentosViewProps> = ({
             </span>
           </div>
           <p className="mt-1 text-sm text-muted-foreground">
-            Acompanhamento em tempo real das vistorias demandadas para{' '}
+            Acompanhamento em tempo real das demandas para{' '}
             <strong className="text-foreground">{currentUser?.email || 'seu usuário'}</strong>.
           </p>
         </div>
@@ -533,7 +555,7 @@ export const AcionamentosView: React.FC<AcionamentosViewProps> = ({
                   <div className="mb-3.5 flex items-center justify-between rounded-md bg-amber-500/15 border border-amber-500/30 px-3 py-1.5 text-xs font-semibold text-amber-300">
                     <span className="flex items-center gap-1.5">
                       <Clock className="size-3.5 animate-spin text-amber-400" />
-                      NOVA DEMANDA ({getTipoAcionamento(item)}) — AGUARDANDO SEU ACEITE
+                      NOVA DEMANDA ({rotuloAtividade(item).toUpperCase()}) — AGUARDANDO SEU ACEITE
                     </span>
                     <span className="text-[10px] font-mono text-amber-400">
                       Demandado por: {item.demandadoPorNome || 'Sistema Telecom'}
@@ -608,7 +630,7 @@ export const AcionamentosView: React.FC<AcionamentosViewProps> = ({
                     {/* Checklist if present in document */}
                     {item.checklistItems && item.checklistItems.length > 0 && (
                       <div className="rounded-lg border border-border bg-sidebar/50 p-3 space-y-1.5 text-xs">
-                        <p className="font-semibold text-foreground">Checklist da Vistoria:</p>
+                        <p className="font-semibold text-foreground">Checklist {rotuloAtividadeDe(item)}:</p>
                         <div className="grid gap-1 sm:grid-cols-2">
                           {item.checklistItems.map((chk) => (
                             <div key={chk.id} className="flex items-center gap-2 text-muted-foreground">
@@ -630,7 +652,7 @@ export const AcionamentosView: React.FC<AcionamentosViewProps> = ({
                           <span>{item.motivoRecusa || 'Motivo não informado.'}</span>
                         </div>
                         <div className="text-[11px] opacity-80">
-                          Recusado por: {item.recusadoPorNome || item.recusadoPorEmail || 'Vistoriador'}
+                          Recusado por: {item.recusadoPorNome || item.recusadoPorEmail || (rotuloAtividade(item) === 'Projeto' ? 'Executor' : 'Vistoriador')}
                           {item.recusadoEm ? ` em ${formatDateTime(item.recusadoEm)}` : ''}
                         </div>
                       </div>
@@ -641,7 +663,7 @@ export const AcionamentosView: React.FC<AcionamentosViewProps> = ({
                       <div className="rounded-lg border border-emerald-500/30 bg-emerald-500/10 p-2.5 text-xs text-emerald-300 leading-relaxed space-y-1">
                         <div>
                           <span className="font-bold">Resumo da Conclusão: </span>
-                          {item.resumoConclusao || 'Vistoria finalizada.'}
+                          {item.resumoConclusao || `${rotuloAtividade(item)} finalizad${rotuloAtividade(item) === 'Projeto' ? 'o' : 'a'}.`}
                         </div>
                         {item.pendencias && (
                           <div className="text-[11px] text-amber-300">
@@ -765,7 +787,7 @@ export const AcionamentosView: React.FC<AcionamentosViewProps> = ({
                             className="inline-flex h-8 items-center gap-1 rounded bg-emerald-600 hover:bg-emerald-500 text-white px-3 text-xs font-semibold cursor-pointer shadow-xs transition-colors"
                           >
                             <UserCheck className="size-3.5" />
-                            <span>Aceitar</span>
+                            <span>Aceitar {rotuloAtividade(item)}</span>
                           </button>
                           <button
                             type="button"
@@ -868,7 +890,7 @@ export const AcionamentosView: React.FC<AcionamentosViewProps> = ({
                             className="inline-flex h-8 items-center gap-1 rounded bg-emerald-600 hover:bg-emerald-500 text-white px-3 text-xs font-semibold cursor-pointer shadow-xs"
                           >
                             <CheckCircle2 className="size-3.5" />
-                            <span>Concluir Vistoria</span>
+                            <span>Concluir {rotuloAtividade(item)}</span>
                           </button>
                         </>
                       )}
@@ -917,7 +939,7 @@ export const AcionamentosView: React.FC<AcionamentosViewProps> = ({
               <div className="flex items-center gap-2 text-destructive">
                 <UserX className="size-5" />
                 <h3 className="text-base font-bold text-foreground">
-                  Recusar Demanda de Vistoria
+                  Recusar Demanda {rotuloAtividadeDe(recusarItem)}
                 </h3>
               </div>
               <button
@@ -993,7 +1015,7 @@ export const AcionamentosView: React.FC<AcionamentosViewProps> = ({
             <div className="mt-4 space-y-3">
               <p className="text-xs text-muted-foreground">
                 Confirmando chegada ao site{' '}
-                <strong className="text-foreground font-mono">{checkinItem.siteId}</strong>.
+                <strong className="text-foreground font-mono">{checkinItem.siteId}</strong> para {rotuloAtividadeLower(checkinItem)}.
               </p>
 
               <div>
@@ -1039,7 +1061,7 @@ export const AcionamentosView: React.FC<AcionamentosViewProps> = ({
               <div className="flex items-center gap-2 text-emerald-400">
                 <CheckCircle2 className="size-5" />
                 <h3 className="text-base font-bold text-foreground">
-                  Concluir Vistoria em Campo
+                  Concluir {rotuloAtividade(concluirItem)} em Campo
                 </h3>
               </div>
               <button
@@ -1053,19 +1075,19 @@ export const AcionamentosView: React.FC<AcionamentosViewProps> = ({
 
             <div className="mt-4 space-y-3">
               <p className="text-xs text-muted-foreground">
-                Finalizando vistoria no site{' '}
+                Finalizando {rotuloAtividadeLower(concluirItem)} no site{' '}
                 <strong className="text-foreground font-mono">{concluirItem.siteId}</strong> ({concluirItem.siteNome}).
               </p>
 
               <div>
                 <label className="block text-xs font-semibold text-foreground mb-1">
-                  Resumo da Conclusão / Laudo Sumário (obrigatório):
+                  Resumo {rotuloAtividadeDe(concluirItem)} / Laudo Sumário (obrigatório):
                 </label>
                 <textarea
                   rows={3}
                   value={resumoConclusaoInput}
                   onChange={(e) => setResumoConclusaoInput(e.target.value)}
-                  placeholder="Descreva o resumo do atendimento realizado..."
+                  placeholder={`Descreva o resumo do atendimento ${rotuloAtividadeDe(concluirItem)} realizado...`}
                   className="w-full rounded-lg border border-input bg-background p-2.5 text-xs text-foreground placeholder:text-muted-foreground focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
                 />
               </div>
@@ -1098,7 +1120,7 @@ export const AcionamentosView: React.FC<AcionamentosViewProps> = ({
                 onClick={handleConfirmConcluir}
                 className="rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white px-4 py-2 text-xs font-semibold disabled:opacity-50 cursor-pointer"
               >
-                {actionLoading ? 'Finalizando...' : 'Concluir & Transmitir ao Firebase'}
+                {actionLoading ? 'Finalizando...' : `Concluir ${rotuloAtividade(concluirItem)} & Transmitir ao Firebase`}
               </button>
             </div>
           </div>
